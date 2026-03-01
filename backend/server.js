@@ -1,7 +1,8 @@
-const express = require("express");
-const cors = require("cors");
-const dotenv = require("dotenv");
-const Groq = require("groq-sdk").default;
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+import dotenv from "dotenv";
+import Groq from "groq-sdk";
 
 dotenv.config();
 
@@ -9,32 +10,21 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
+  connectDB();
+});
+
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-app.post("/chat", async (req, res) => {
-  try {
-    const userMessage = req.body.message;
-
-    const completion = await groq.chat.completions.create({
-      messages: [
-        { role: "system", content: "You are a helpful AI assistant." },
-        { role: "user", content: userMessage }
-      ],
-      model: "llama-3.1-8b-instant",
-    });
-
-    res.json({
-      reply: completion.choices[0].message.content,
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Something went wrong" });
+const connectDB = async () => {
+  try{
+    await mongoose.connect(process.env.MONGODB_URI);
+      console.log("Connected to MongoDB database !!!");
+    }
+    catch (err) {
+      console.log("Error connecting to MongoDB database:",err);
+    }
   }
-});
-
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
-});
