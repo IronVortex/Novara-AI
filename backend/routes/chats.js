@@ -1,12 +1,12 @@
 import express from "express";
-import Thread from "../models/Threads";
+import Thread from "../models/Threads.js";
 const router = express.Router();
 
 router.post("/test", async(req, res) => {
     try{
          const thread=new Thread({
-            threadID:"123456",
-            title:"Test Thread",
+            threadID:"13579",
+            title:"Test Thread new",
          });
 
          const response= await thread.save();
@@ -17,3 +17,5 @@ router.post("/test", async(req, res) => {
         res.status(500).json({error:"Failed to create thread"});
     }
 });
+
+export default router;
