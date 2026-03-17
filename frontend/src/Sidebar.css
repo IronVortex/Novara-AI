@@ -17,7 +17,9 @@ button{
     border-radius: 10px;
     background-color: transparent;
     border-color: rgb(255, 255, 255 , 0.5);
+    cursor: pointer;
 }
+
 .logo{
     height: 25px;
     width: 25px;
@@ -28,6 +30,10 @@ button{
 
 button span {
     font-size: 20px;
+}
+
+button:hover{
+    background-color: rgb(255, 255, 255 , 0.05);
 }
 
 .history{
@@ -43,4 +49,18 @@ button span {
     margin-bottom: 0.3rem;
     font-size: 14px;
     border: solid 10px transparent;
+    position:relative;
+}
+
+.history li:hover{
+    background-color: rgb(255, 255, 255 , 0.05);
+    border-radius: 10px;
+}
+
+.sign{
+    margin: 10px;
+    padding: 10px;
+    font-size: 14px;
+    text-align: center;
+    border-top: solid 0.25px rgb(255, 255, 255 , 0.1);
 }
