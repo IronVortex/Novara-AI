@@ -4,7 +4,7 @@ function ChatWindow(){
     return(
         <div className="chatWindow"> 
         <div className="navbar">
-            <span>NOVARA &nbsp;  AI &nbsp; <i class="fa-solid fa-angle-down"></i></span>
+            <span>NOVARA-AI &nbsp; <i class="fa-solid fa-angle-down"></i></span>
             <div className="userIcondiv">
                 <i class="fa-solid fa-user"></i>
             </div>
