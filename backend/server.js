@@ -16,19 +16,40 @@ app.use(express.json());
 // MongoDB Connection
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      // useNewUrlParser/useUnifiedTopology are defaults in mongoose v6+
+    });
     console.log("Connected to MongoDB database!");
   } catch (err) {
     console.error("Error connecting to MongoDB:", err);
-    process.exit(1);
+    throw err;
   }
 };
 
 // Routes
 app.use("/api/chats", chatRoutes);
 
-// Start Server
-app.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-  await connectDB();
+// Start Server after DB connects
+const start = async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  }
+};
+
+start();
+
+// Graceful error handling
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  process.exit(1);
 });

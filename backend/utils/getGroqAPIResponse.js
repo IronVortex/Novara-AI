@@ -21,9 +21,20 @@ const getGroqAPIResponse = async (message) => {
       model: "llama-3.1-8b-instant",
     });
 
+    if (
+      !completion ||
+      !completion.choices ||
+      !completion.choices[0] ||
+      !completion.choices[0].message
+    ) {
+      throw new Error("Invalid completion response from Groq API");
+    }
+
     return completion.choices[0].message.content;
   } catch (err) {
-    console.error(err);
+    console.error("Groq API error:", err);
+    // Propagate error so callers can return proper HTTP responses
+    throw err;
   }
 };
 
