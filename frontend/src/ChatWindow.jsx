@@ -4,8 +4,10 @@ import { MyContext } from "./MyContext.jsx";
 import { useContext, useState, useEffect } from "react";
 import {ScaleLoader} from "react-spinners";
 
+const API = "http://localhost:5000/api/chats";
+
 function ChatWindow() {
-    const {prompt, setPrompt, reply, setReply, currThreadId, setPrevChats, setNewChat} = useContext(MyContext);
+    const {prompt, setPrompt, reply, setReply, currThreadId, setPrevChats, setNewChat, setAllThreads} = useContext(MyContext);
     const [loading, setLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
 
@@ -26,10 +28,27 @@ function ChatWindow() {
         };
 
         try {
-            const response = await fetch("http://localhost:8080/api/chat", options);
-            const res = await response.json();
-            console.log(res);
-            setReply(res.reply);
+                        const response = await fetch(`${API}/chat`, options);
+                        if (!response.ok) {
+                                const errText = await response.text();
+                                throw new Error(errText || "Failed to fetch reply");
+                        }
+
+                        const res = await response.json();
+                        console.log("chat response", res);
+                        setReply(res.reply);
+
+                        // Refresh threads list
+                        try {
+                            const listRes = await fetch(`${API}/thread`);
+                            if (listRes.ok) {
+                                const threads = await listRes.json();
+                                const filtered = threads.map(t => ({ threadId: t.threadId, title: t.title }));
+                                setAllThreads(filtered);
+                            }
+                        } catch (e) {
+                            console.warn("Failed to refresh thread list", e);
+                        }
         } catch(err) {
             console.log(err);
         }

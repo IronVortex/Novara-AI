@@ -36,8 +36,8 @@ function Chat() {
             {newChat && <h1>Start a New Chat!</h1>}
             <div className="chats">
                 {
-                    prevChats?.slice(0, -1).map((chat, idx) => 
-                        <div className={chat.role === "user"? "userDiv" : "gptDiv"} key={idx}>
+                    (prevChats || []).slice(0, -1).map((chat, idx) => 
+                        <div className={chat.role === "user"? "userDiv" : "gptDiv"} key={chat.timestamp || chat.id || idx}>
                             {
                                 chat.role === "user"? 
                                 <p className="userMessage">{chat.content}</p> : 
@@ -48,12 +48,12 @@ function Chat() {
                 }
 
                 {
-                    prevChats.length > 0  && (
+                    (prevChats || []).length > 0  && (
                         <>
                             {
                                 latestReply === null ? (
                                     <div className="gptDiv" key={"non-typing"} >
-                                    <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{prevChats[prevChats.length-1].content}</ReactMarkdown>
+                                    <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{(prevChats || [])[prevChats.length-1]?.content}</ReactMarkdown>
                                 </div>
                                 ) : (
                                     <div className="gptDiv" key={"typing"} >

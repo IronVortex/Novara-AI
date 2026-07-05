@@ -36,7 +36,7 @@ function Sidebar() {
 
   useEffect(() => {
     getAllThreads();
-  }, [currThreadId]);
+  }, []);
 
   const createNewChat = () => {
     setNewChat(true);
@@ -79,7 +79,7 @@ function Sidebar() {
       console.error(err);
     }
   };
-
+console.log(JSON.stringify(allThreads, null, 2));
   return (
     <section className="sidebar">
       <button onClick={createNewChat}>
