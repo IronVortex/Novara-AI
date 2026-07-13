@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { v1 as uuidv1 } from "uuid";
+import { logoutUser } from "../services/api.js";
 import { MyContext } from "./MyContext.js";
 
 export { MyContext } from "./MyContext.js";
@@ -18,11 +19,19 @@ export function MyContextProvider({ children }) {
 
   const isAuthenticated = Boolean(authUser && token);
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } catch {
+      // Stateless JWT logout is client-side; ignore network errors.
+    }
+
     localStorage.removeItem("novara-token");
     sessionStorage.removeItem("novara-token");
     setToken(null);
     setAuthUser(null);
+    setPrevChats([]);
+    setAllThreads([]);
     setAuthReady(true);
     setToast({ type: "success", message: "Signed out successfully" });
   };

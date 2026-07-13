@@ -12,7 +12,7 @@ import { validateChatRequest, validateThreadParam } from "../middleware/validate
 
 const router = express.Router();
 
-router.post("/test", asyncHandler(createTestThread));
+router.post("/test", protect, asyncHandler(createTestThread));
 router.get("/thread", protect, asyncHandler(getAllThreads));
 router.get("/thread/:threadId", protect, validateThreadParam, asyncHandler(getThreadMessages));
 router.delete("/thread/:threadId", protect, validateThreadParam, asyncHandler(deleteThread));

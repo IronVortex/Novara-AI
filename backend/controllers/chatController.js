@@ -5,6 +5,7 @@ import getGroqAPIResponse from "../utils/getGroqAPIResponse.js";
 export const createTestThread = async (req, res) => {
   const thread = await Thread.create({
     threadId: uuidv4(),
+    userId: req.user._id,
     title: "Testing New Thread",
     messages: [],
   });

@@ -4,10 +4,11 @@ import "./styles/app.css";
 import Sidebar from "./components/sidebar/Sidebar.jsx";
 import ChatWindow from "./components/chat/ChatWindow.jsx";
 import ProtectedRoute from "./components/common/ProtectedRoute.jsx";
+import GuestRoute from "./components/common/GuestRoute.jsx";
 import Toast from "./components/common/Toast.jsx";
 import { MyContext, MyContextProvider } from "./context/MyContext.jsx";
-import Login from "./pages/Login.jsx";
-import Register from "./pages/Register.jsx";
+import Login from "./pages/Login/index.jsx";
+import Register from "./pages/Register/index.jsx";
 import { getMe } from "./services/api.js";
 
 function AppShell() {
@@ -35,7 +36,7 @@ function AppRoutes() {
         const response = await getMe();
         setAuthUser(response.user);
         setToken(storedToken);
-      } catch (error) {
+      } catch {
         localStorage.removeItem("novara-token");
         sessionStorage.removeItem("novara-token");
         setToken(null);
@@ -52,8 +53,10 @@ function AppRoutes() {
     <>
       <Toast />
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<AppShell />} />
         </Route>

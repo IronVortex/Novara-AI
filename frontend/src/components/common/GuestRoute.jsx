@@ -3,7 +3,7 @@ import { Navigate, Outlet } from "react-router-dom";
 import { MyContext } from "../../context/MyContext.jsx";
 import Loader from "./Loader.jsx";
 
-function ProtectedRoute() {
+function GuestRoute() {
   const { isAuthenticated, authReady } = useContext(MyContext);
 
   if (!authReady) {
@@ -14,7 +14,7 @@ function ProtectedRoute() {
     );
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  return isAuthenticated ? <Navigate to="/" replace /> : <Outlet />;
 }
 
-export default ProtectedRoute;
+export default GuestRoute;
