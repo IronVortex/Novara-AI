@@ -13,7 +13,7 @@ export const createTestThread = async (req, res) => {
 };
 
 export const getAllThreads = async (req, res) => {
-  const threads = await Thread.find({})
+  const threads = await Thread.find({ userId: req.user._id })
     .sort({ updatedAt: -1 })
     .select("threadId title updatedAt")
     .lean();
@@ -22,7 +22,10 @@ export const getAllThreads = async (req, res) => {
 };
 
 export const getThreadMessages = async (req, res) => {
-  const thread = await Thread.findOne({ threadId: req.params.threadId }).lean();
+  const thread = await Thread.findOne({
+    threadId: req.params.threadId,
+    userId: req.user._id,
+  }).lean();
 
   if (!thread) {
     return res.status(404).json({ error: "Thread not found" });
@@ -34,6 +37,7 @@ export const getThreadMessages = async (req, res) => {
 export const deleteThread = async (req, res) => {
   const deletedThread = await Thread.findOneAndDelete({
     threadId: req.params.threadId,
+    userId: req.user._id,
   });
 
   if (!deletedThread) {
@@ -50,11 +54,15 @@ export const deleteThread = async (req, res) => {
 export const chatWithThread = async (req, res) => {
   const { threadId, message } = req.body;
 
-  let thread = await Thread.findOne({ threadId });
+  let thread = await Thread.findOne({
+    threadId,
+    userId: req.user._id,
+  });
 
   if (!thread) {
     thread = new Thread({
       threadId,
+      userId: req.user._id,
       title: message.slice(0, 60).trim() || "New Chat",
       messages: [{ role: "user", content: message }],
     });

@@ -4,6 +4,7 @@ import cors from "cors";
 
 import connectDB from "./config/db.js";
 import chatRoutes from "./routes/chats.js";
+import authRoutes from "./routes/auth.js";
 import notFound from "./middleware/notFound.js";
 import errorHandler from "./middleware/errorHandler.js";
 
@@ -13,6 +14,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/auth", authRoutes);
 app.use("/api/chats", chatRoutes);
 app.use(notFound);
 app.use(errorHandler);

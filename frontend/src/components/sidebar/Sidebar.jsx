@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { MyContext } from "../../context/MyContext.jsx";
 import { deleteThread, getThread, getThreads } from "../../services/api.js";
@@ -17,7 +18,10 @@ function Sidebar() {
     setReply,
     setCurrThreadId,
     setPrevChats,
+    authUser,
+    logout,
   } = useContext(MyContext);
+  const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
 
@@ -77,6 +81,11 @@ function Sidebar() {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <aside className="sidebar">
       <SidebarHeader onNewChat={createNewChat} />
@@ -106,12 +115,15 @@ function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="profile-card">
-          <div className="avatar">A</div>
+          <div className="avatar">{authUser?.name?.[0] || "A"}</div>
           <div>
-            <strong>Alex</strong>
+            <strong>{authUser?.name || "Alex"}</strong>
             <p>Premium plan</p>
           </div>
         </div>
+        <button className="logout-btn" onClick={handleLogout}>
+          Logout
+        </button>
       </div>
     </aside>
   );

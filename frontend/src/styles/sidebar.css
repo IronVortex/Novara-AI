@@ -134,6 +134,9 @@
 
 .sidebar-footer {
   margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .profile-card {
@@ -158,6 +161,14 @@
   margin: 2px 0 0;
   color: #94a3b8;
   font-size: 0.8rem;
+}
+
+.logout-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.14);
+  color: #fecaca;
 }
 
 @media (max-width: 900px) {

@@ -23,8 +23,15 @@ const threadSchema = new mongoose.Schema(
     threadId: {
       type: String,
       required: true,
-      unique: true, 
+      unique: true,
       trim: true,
+    },
+
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
     },
 
     title: {
