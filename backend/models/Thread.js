@@ -23,14 +23,16 @@ const threadSchema = new mongoose.Schema(
     threadId: {
       type: String,
       required: true,
-      unique: true,
+      unique: true, 
       trim: true,
     },
+
     title: {
       type: String,
       default: "New Chat",
       trim: true,
     },
+
     messages: {
       type: [messageSchema],
       default: [],
@@ -41,7 +43,6 @@ const threadSchema = new mongoose.Schema(
   }
 );
 
-threadSchema.index({ threadId: 1 });
 threadSchema.index({ updatedAt: -1 });
 
 export default mongoose.model("Thread", threadSchema);

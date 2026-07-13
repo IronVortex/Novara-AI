@@ -1,3 +1,1 @@
-import { createContext } from "react";
-
-export const MyContext = createContext("");
+export { MyContext, MyContextProvider } from "./context/MyContext.jsx";
