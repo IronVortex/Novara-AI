@@ -2,13 +2,16 @@ import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { MyContext } from "../../context/MyContext.jsx";
-import { deleteThread, getThread, getThreads } from "../../services/api.js";
-import { normalizeThreads } from "../../utils/helpers.js";
+import { deleteThread, exportThread, getThread, getThreads, updateThread } from "../../services/api.js";
+import { copyConversation, exportMarkdownFile } from "../../utils/exportChat.js";
+import { buildShareUrl, normalizeThreads, sortThreads } from "../../utils/helpers.js";
+import Modal from "../common/Modal.jsx";
+import ProfileDropdown from "../common/ProfileDropdown.jsx";
 import SidebarHeader from "./SidebarHeader.jsx";
 import ThreadItem from "./ThreadItem.jsx";
 import "../../styles/sidebar.css";
 
-function Sidebar() {
+function Sidebar({ isOpen, onClose }) {
   const {
     allThreads,
     setAllThreads,
@@ -20,15 +23,20 @@ function Sidebar() {
     setPrevChats,
     authUser,
     logout,
+    setToast,
+    prevChats,
   } = useContext(MyContext);
   const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [renameTarget, setRenameTarget] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const loadThreads = useCallback(async () => {
     try {
       const threads = await getThreads();
-      setAllThreads(normalizeThreads(threads));
+      setAllThreads(sortThreads(normalizeThreads(threads)));
     } catch (error) {
       console.error(error);
     }
@@ -40,10 +48,13 @@ function Sidebar() {
 
   const filteredThreads = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return allThreads;
+    const base = sortThreads(allThreads);
+    if (!normalizedQuery) return base;
 
-    return allThreads.filter((thread) =>
-      thread.title?.toLowerCase().includes(normalizedQuery)
+    return base.filter(
+      (thread) =>
+        thread.title?.toLowerCase().includes(normalizedQuery) ||
+        thread.tags?.some((tag) => tag.toLowerCase().includes(normalizedQuery))
     );
   }, [allThreads, query]);
 
@@ -53,15 +64,17 @@ function Sidebar() {
     setReply(null);
     setCurrThreadId(uuidv4());
     setPrevChats([]);
+    onClose?.();
   };
 
   const changeThread = async (newThreadId) => {
     setCurrThreadId(newThreadId);
     setNewChat(false);
+    onClose?.();
 
     try {
-      const messages = await getThread(newThreadId);
-      setPrevChats(messages || []);
+      const response = await getThread(newThreadId);
+      setPrevChats(response.messages || response || []);
       setReply(null);
     } catch (error) {
       console.error(error);
@@ -72,12 +85,43 @@ function Sidebar() {
     try {
       await deleteThread(threadId);
       setAllThreads((prev) => prev.filter((thread) => thread.threadId !== threadId));
-
-      if (threadId === currThreadId) {
-        createNewChat();
-      }
+      if (threadId === currThreadId) createNewChat();
+      setToast({ type: "success", message: "Conversation deleted" });
     } catch (error) {
-      console.error(error);
+      setToast({ type: "error", message: error.message });
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleToggleMeta = async (thread, field) => {
+    try {
+      await updateThread(thread.threadId, { [field]: !thread[field] });
+      setAllThreads((prev) =>
+        prev.map((item) =>
+          item.threadId === thread.threadId ? { ...item, [field]: !item[field] } : item
+        )
+      );
+    } catch (error) {
+      setToast({ type: "error", message: error.message });
+    }
+  };
+
+  const handleRename = async () => {
+    if (!renameTarget || !renameValue.trim()) return;
+    try {
+      await updateThread(renameTarget.threadId, { title: renameValue.trim() });
+      setAllThreads((prev) =>
+        prev.map((item) =>
+          item.threadId === renameTarget.threadId ? { ...item, title: renameValue.trim() } : item
+        )
+      );
+      setToast({ type: "success", message: "Conversation renamed" });
+    } catch (error) {
+      setToast({ type: "error", message: error.message });
+    } finally {
+      setRenameTarget(null);
+      setRenameValue("");
     }
   };
 
@@ -86,8 +130,14 @@ function Sidebar() {
     navigate("/login");
   };
 
+  const handleExport = async () => {
+    const response = await exportThread(currThreadId);
+    exportMarkdownFile(response.markdown, response.title);
+    setToast({ type: "success", message: "Chat exported" });
+  };
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? "open" : ""}`}>
       <SidebarHeader onNewChat={createNewChat} />
 
       <label className="search-box" htmlFor="thread-search">
@@ -108,23 +158,47 @@ function Sidebar() {
             thread={thread}
             active={thread.threadId === currThreadId}
             onSelect={changeThread}
-            onDelete={handleDeleteThread}
+            onDelete={setDeleteTarget}
+            onRename={(item) => {
+              setRenameTarget(item);
+              setRenameValue(item.title);
+            }}
+            onTogglePin={() => handleToggleMeta(thread, "isPinned")}
+            onToggleFavorite={() => handleToggleMeta(thread, "isFavorite")}
           />
         ))}
       </ul>
 
       <div className="sidebar-footer">
-        <div className="profile-card">
-          <div className="avatar">{authUser?.name?.[0] || "A"}</div>
-          <div>
-            <strong>{authUser?.name || "Alex"}</strong>
-            <p>Premium plan</p>
-          </div>
-        </div>
-        <button className="logout-btn" onClick={handleLogout}>
-          Logout
-        </button>
+        <ProfileDropdown
+          user={authUser}
+          onLogout={handleLogout}
+          onExport={handleExport}
+          onCopy={() => copyConversation(prevChats).then(() => setToast({ type: "success", message: "Copied" }))}
+          onShare={() => {
+            navigator.clipboard.writeText(buildShareUrl(currThreadId));
+            setToast({ type: "success", message: "Share link copied" });
+          }}
+        />
       </div>
+
+      <Modal isOpen={Boolean(deleteTarget)} title="Delete conversation?" onClose={() => setDeleteTarget(null)}>
+        <p>This action cannot be undone.</p>
+        <div className="modal-actions">
+          <button type="button" onClick={() => setDeleteTarget(null)}>Cancel</button>
+          <button type="button" className="danger" onClick={() => handleDeleteThread(deleteTarget.threadId)}>
+            Delete
+          </button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={Boolean(renameTarget)} title="Rename conversation" onClose={() => setRenameTarget(null)}>
+        <input value={renameValue} onChange={(event) => setRenameValue(event.target.value)} />
+        <div className="modal-actions">
+          <button type="button" onClick={() => setRenameTarget(null)}>Cancel</button>
+          <button type="button" onClick={handleRename}>Save</button>
+        </div>
+      </Modal>
     </aside>
   );
 }

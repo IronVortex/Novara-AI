@@ -24,30 +24,106 @@ const request = async (path, options = {}) => {
 };
 
 export const loginUser = async (payload) =>
-  request("/auth/login", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  request("/auth/login", { method: "POST", body: JSON.stringify(payload) });
 
 export const registerUser = async (payload) =>
-  request("/auth/register", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  request("/auth/register", { method: "POST", body: JSON.stringify(payload) });
 
 export const getMe = async () => request("/auth/me");
-
 export const logoutUser = async () => request("/auth/logout", { method: "POST" });
 
 export const sendMessage = async (payload) =>
-  request("/chats/chat", {
+  request("/chats/chat", { method: "POST", body: JSON.stringify(payload) });
+
+export const sendMessageStream = async (payload, handlers = {}) => {
+  const { onChunk, onDone, onError, signal } = handlers;
+  const token = getStoredToken();
+
+  const response = await fetch(`${API_BASE_URL}/chats/chat/stream`, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(payload),
+    signal,
   });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || "Stream request failed");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split("\n\n");
+    buffer = events.pop() || "";
+
+    for (const eventBlock of events) {
+      const lines = eventBlock.split("\n");
+      let eventName = "message";
+      let dataLine = "";
+
+      for (const line of lines) {
+        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+        if (line.startsWith("data:")) dataLine = line.slice(5).trim();
+      }
+
+      if (!dataLine) continue;
+      const parsed = JSON.parse(dataLine);
+
+      if (eventName === "chunk") onChunk?.(parsed.content);
+      if (eventName === "done") onDone?.(parsed);
+      if (eventName === "error") onError?.(new Error(parsed.error));
+    }
+  }
+};
+
+export const regenerateMessage = async (payload) =>
+  request("/chats/regenerate", { method: "POST", body: JSON.stringify(payload) });
+
+export const continueMessage = async (payload) =>
+  request("/chats/continue", { method: "POST", body: JSON.stringify(payload) });
+
+export const editMessage = async (payload) =>
+  request("/chats/edit", { method: "POST", body: JSON.stringify(payload) });
+
+export const updateMessageMeta = async (payload) =>
+  request("/chats/message", { method: "PATCH", body: JSON.stringify(payload) });
 
 export const getThreads = async () => request("/chats/thread");
 
 export const getThread = async (threadId) => request(`/chats/thread/${threadId}`);
 
+export const updateThread = async (threadId, payload) =>
+  request(`/chats/thread/${threadId}`, { method: "PATCH", body: JSON.stringify(payload) });
+
 export const deleteThread = async (threadId) =>
   request(`/chats/thread/${threadId}`, { method: "DELETE" });
+
+export const exportThread = async (threadId) => request(`/chats/thread/${threadId}/export`);
+
+export const uploadFile = async (file) => {
+  const token = getStoredToken();
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}/chats/upload`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Upload failed");
+  return data;
+};

@@ -1,11 +1,13 @@
-import "dotenv/config";
 import Groq from "groq-sdk";
+import config from "../config/index.js";
+import {
+  buildContextMessages,
+  buildSummaryPrompt,
+  shouldSummarize,
+} from "./conversationMemory.js";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+const groq = new Groq({ apiKey: config.groq.apiKey });
 
-const MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
 const MAX_RETRIES = 2;
 const BASE_DELAY_MS = 800;
 
@@ -17,52 +19,18 @@ const isRetryable = (error) => {
   return status === 429 || status === 502 || status === 503 || status === 504;
 };
 
-const buildPrompt = (message) => [
-  {
-    role: "system",
-    content: "You are a helpful AI assistant. Keep answers concise, polite, and aligned with the user's query.",
-  },
-  {
-    role: "user",
-    content: message,
-  },
-];
-
-const getGroqAPIResponse = async (message) => {
-  if (!message || typeof message !== "string") {
-    throw Object.assign(new Error("Invalid message payload for AI request"), { status: 400 });
-  }
-
-  if (!process.env.GROQ_API_KEY) {
-    throw Object.assign(new Error("Missing GROQ_API_KEY in environment"), { status: 500 });
-  }
-
+const withRetry = async (operation) => {
   let lastError;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
     try {
-      const completion = await groq.chat.completions.create({
-        messages: buildPrompt(message),
-        model: MODEL,
-      });
-
-      const reply = completion?.choices?.[0]?.message?.content?.trim();
-      if (!reply) {
-        throw new Error("Invalid completion response from Groq API");
-      }
-
-      return reply;
+      return await operation();
     } catch (err) {
       lastError = err;
-      const retryable = isRetryable(err);
-      const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-
-      if (retryable && attempt < MAX_RETRIES) {
-        console.warn(`Groq retry ${attempt + 1}/${MAX_RETRIES} after ${delay}ms`, err.message);
-        await sleep(delay);
+      if (isRetryable(err) && attempt < MAX_RETRIES) {
+        await sleep(BASE_DELAY_MS * Math.pow(2, attempt));
         continue;
       }
-
       const error = new Error("Groq API request failed");
       error.status = err.status || err.statusCode || err?.response?.status || 502;
       error.details = err.message;
@@ -72,5 +40,63 @@ const getGroqAPIResponse = async (message) => {
 
   throw lastError;
 };
+
+export const summarizeConversation = async (messages = []) => {
+  if (!messages.length) return "";
+
+  const completion = await withRetry(() =>
+    groq.chat.completions.create({
+      model: config.groq.model,
+      messages: buildSummaryPrompt(messages),
+      max_tokens: 400,
+    })
+  );
+
+  return completion?.choices?.[0]?.message?.content?.trim() || "";
+};
+
+export const maybeUpdateSummary = async (thread) => {
+  if (!shouldSummarize(thread.messages.length)) return thread.summary || "";
+
+  const olderMessages = thread.messages.slice(0, -config.ai.maxContextMessages);
+  if (!olderMessages.length) return thread.summary || "";
+
+  const summary = await summarizeConversation(olderMessages);
+  thread.summary = summary;
+  return summary;
+};
+
+export const getGroqAPIResponse = async (messages = [], summary = "") => {
+  const prompt = buildContextMessages(messages, summary);
+
+  const completion = await withRetry(() =>
+    groq.chat.completions.create({
+      model: config.groq.model,
+      messages: prompt,
+    })
+  );
+
+  const reply = completion?.choices?.[0]?.message?.content?.trim();
+  if (!reply) throw new Error("Invalid completion response from Groq API");
+  return reply;
+};
+
+export async function* streamGroqAPIResponse(messages = [], summary = "", signal) {
+  const prompt = buildContextMessages(messages, summary);
+
+  const stream = await withRetry(() =>
+    groq.chat.completions.create({
+      model: config.groq.model,
+      messages: prompt,
+      stream: true,
+    })
+  );
+
+  for await (const chunk of stream) {
+    if (signal?.aborted) break;
+    const content = chunk?.choices?.[0]?.delta?.content || "";
+    if (content) yield content;
+  }
+}
 
 export default getGroqAPIResponse;

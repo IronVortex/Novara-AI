@@ -1,24 +1,17 @@
-import { useContext, useEffect } from "react";
+import { lazy, Suspense, useContext, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "./styles/theme.css";
 import "./styles/app.css";
-import Sidebar from "./components/sidebar/Sidebar.jsx";
-import ChatWindow from "./components/chat/ChatWindow.jsx";
 import ProtectedRoute from "./components/common/ProtectedRoute.jsx";
 import GuestRoute from "./components/common/GuestRoute.jsx";
 import Toast from "./components/common/Toast.jsx";
+import Loader from "./components/common/Loader.jsx";
 import { MyContext, MyContextProvider } from "./context/MyContext.jsx";
-import Login from "./pages/Login/index.jsx";
-import Register from "./pages/Register/index.jsx";
 import { getMe } from "./services/api.js";
 
-function AppShell() {
-  return (
-    <div className="app-shell">
-      <Sidebar />
-      <ChatWindow />
-    </div>
-  );
-}
+const AppShell = lazy(() => import("./components/layout/AppShell.jsx"));
+const Login = lazy(() => import("./pages/Login/index.jsx"));
+const Register = lazy(() => import("./pages/Register/index.jsx"));
 
 function AppRoutes() {
   const { setAuthUser, setToken, setAuthReady, setToast, token } = useContext(MyContext);
@@ -52,16 +45,18 @@ function AppRoutes() {
   return (
     <>
       <Toast />
-      <Routes>
-        <Route element={<GuestRoute />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-        </Route>
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<AppShell />} />
-        </Route>
-        <Route path="*" element={<Navigate to={token ? "/" : "/login"} replace />} />
-      </Routes>
+      <Suspense fallback={<div className="auth-loading"><Loader loading label="Loading Novara..." /></div>}>
+        <Routes>
+          <Route element={<GuestRoute />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+          </Route>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<AppShell />} />
+          </Route>
+          <Route path="*" element={<Navigate to={token ? "/" : "/login"} replace />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }

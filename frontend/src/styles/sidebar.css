@@ -83,11 +83,28 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: rgba(15, 23, 42, 0.48);
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(22, 27, 34, 0.72);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 8px;
   transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.thread-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.thread-action {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  width: 24px;
+  height: 24px;
+  font-size: 0.72rem;
+  padding: 0;
 }
 
 .thread-item:hover,
