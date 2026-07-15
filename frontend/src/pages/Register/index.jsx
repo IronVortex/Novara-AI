@@ -8,6 +8,7 @@ import {
   toFirebaseIdentity,
 } from "../../services/firebase.js";
 import { getPasswordStrength, validateEmail, validatePassword, getPasswordHints } from "../../utils/validatePassword.js";
+import { IconGoogle } from "../../components/common/Icons.jsx";
 import "../../styles/auth.css";
 
 function Register() {
@@ -37,23 +38,16 @@ function Register() {
     setAuthReady(true);
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setTouched({ password: true });
-
     if (!canSubmit) {
       setToast({ type: "error", message: "Please fix the form errors before continuing" });
       return;
     }
-
     setLoading(true);
-
     try {
-      const response = await registerUser({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-      });
+      const response = await registerUser({ name: form.name, email: form.email, password: form.password });
       persistSession(response, form.rememberMe);
       setToast({ type: "success", message: "Your Novara account is ready" });
       navigate("/app");
@@ -81,6 +75,29 @@ function Register() {
 
   return (
     <div className="auth-shell">
+      {/* ── Left Hero Panel ─────────────────────── */}
+      <div className="auth-hero">
+        <div className="auth-hero-glow" />
+        <Link to="/" className="auth-hero-brand">
+          <div className="brand-mark">N</div>
+          <span>Novara AI</span>
+        </Link>
+        <h2 className="auth-hero-headline">Start building<br />your AI workspace</h2>
+        <p className="auth-hero-tagline">
+          Join thousands using Novara AI to think faster, write better,
+          and get more done — with or without a cloud account.
+        </p>
+        <div className="auth-hero-features">
+          {["Free to start, no credit card needed", "5 beautiful themes", "Guest mode available immediately", "Speech-to-text & read aloud"].map((f) => (
+            <div key={f} className="auth-hero-feature">
+              <div className="auth-hero-feature-dot" />
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Right Form Panel ────────────────────── */}
       <div className="auth-card">
         <div className="auth-brand">
           <div className="brand-mark">N</div>
@@ -98,7 +115,7 @@ function Register() {
               value={form.name}
               required
               autoComplete="name"
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </label>
 
@@ -109,7 +126,7 @@ function Register() {
               value={form.email}
               required
               autoComplete="email"
-              onChange={(event) => setForm({ ...form, email: event.target.value })}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
             {form.email && emailError ? <span className="field-error">{emailError}</span> : null}
           </label>
@@ -122,7 +139,7 @@ function Register() {
               required
               minLength={6}
               autoComplete="new-password"
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
               onBlur={() => setTouched({ password: true })}
             />
             {form.password ? (
@@ -140,16 +157,12 @@ function Register() {
             ) : null}
             {touched.password && passwordErrors.length > 0 ? (
               <ul className="field-error-list">
-                {passwordErrors.map((error) => (
-                  <li key={error}>{error}</li>
-                ))}
+                {passwordErrors.map((err) => <li key={err}>{err}</li>)}
               </ul>
             ) : null}
             {touched.password && passwordHints.length > 0 ? (
               <ul className="field-hint-list">
-                {passwordHints.map((hint) => (
-                  <li key={hint}>{hint}</li>
-                ))}
+                {passwordHints.map((hint) => <li key={hint}>{hint}</li>)}
               </ul>
             ) : null}
           </label>
@@ -158,20 +171,24 @@ function Register() {
             <input
               type="checkbox"
               checked={form.rememberMe}
-              onChange={(event) => setForm({ ...form, rememberMe: event.target.checked })}
+              onChange={(e) => setForm({ ...form, rememberMe: e.target.checked })}
             />
             Remember me
           </label>
 
           <button className="auth-btn" type="submit" disabled={!canSubmit}>
-            {loading ? "Creating account..." : "Create account"}
+            {loading ? "Creating account…" : "Create account"}
           </button>
         </form>
 
         {isFirebaseConfigured ? (
-          <button type="button" className="auth-google" onClick={handleGoogle} disabled={loading}>
-            Continue with Google
-          </button>
+          <>
+            <div className="auth-divider">or</div>
+            <button type="button" className="auth-google" onClick={handleGoogle} disabled={loading}>
+              <IconGoogle size={18} />
+              Continue with Google
+            </button>
+          </>
         ) : null}
 
         <p className="auth-switch">

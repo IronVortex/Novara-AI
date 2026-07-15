@@ -9,6 +9,16 @@ import { formatDate } from "../../utils/formatDate.js";
 import { updateMessageMeta } from "../../services/api.js";
 import CodeBlock from "./CodeBlock.jsx";
 import MermaidBlock from "./MermaidBlock.jsx";
+import {
+  IconCopy,
+  IconCheck,
+  IconRefresh,
+  IconContinue,
+  IconVolumeUp,
+  IconThumbUp,
+  IconThumbDown,
+  IconEdit,
+} from "../common/Icons.jsx";
 
 function ChatMessage({
   message,
@@ -46,7 +56,9 @@ function ChatMessage({
     }
   };
 
-  const timestamp = useMemo(() => formatDate(message.updatedAt || message.createdAt || Date.now()), [message]);
+  const [now] = useState(() => Date.now());
+  const messageTime = message.updatedAt || message.createdAt || now;
+  const timestamp = useMemo(() => formatDate(messageTime), [messageTime]);
 
   return (
     <article className={`message-row ${isUser ? "user-row" : "assistant-row"} ${message.isPinned ? "pinned" : ""}`}>
@@ -110,42 +122,69 @@ function ChatMessage({
         <div className="message-actions">
           {!isUser ? (
             <>
-              <button type="button" onClick={handleCopy}>
-                {copied ? "Copied" : "Copy"}
+              <button
+                type="button"
+                onClick={handleCopy}
+                title={copied ? "Copied" : "Copy text"}
+                aria-label={copied ? "Copied text" : "Copy text"}
+              >
+                {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
               </button>
-              <button type="button" onClick={() => onRegenerate(index)}>
-                Regenerate
+              <button
+                type="button"
+                onClick={() => onRegenerate(index)}
+                title="Regenerate response"
+                aria-label="Regenerate response"
+              >
+                <IconRefresh size={16} />
               </button>
               {isAuthenticated ? (
-                <button type="button" onClick={onContinue}>
-                  Continue
+                <button
+                  type="button"
+                  onClick={onContinue}
+                  title="Continue response"
+                  aria-label="Continue response"
+                >
+                  <IconContinue size={16} />
                 </button>
               ) : null}
               {speechEnabled ? (
-                <button type="button" onClick={() => onSpeak(message.content)}>
-                  Read Aloud
+                <button
+                  type="button"
+                  onClick={() => onSpeak(message.content)}
+                  title="Read aloud"
+                  aria-label="Read aloud"
+                >
+                  <IconVolumeUp size={16} />
                 </button>
               ) : null}
               <button
                 type="button"
                 className={feedback === "👍" ? "active" : ""}
                 onClick={() => handleReaction("👍")}
+                title="Like response"
                 aria-label="Like response"
               >
-                Like
+                <IconThumbUp size={16} />
               </button>
               <button
                 type="button"
                 className={feedback === "👎" ? "active" : ""}
                 onClick={() => handleReaction("👎")}
+                title="Dislike response"
                 aria-label="Dislike response"
               >
-                Dislike
+                <IconThumbDown size={16} />
               </button>
             </>
           ) : (
-            <button type="button" onClick={() => setEditing(true)}>
-              Edit
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              title="Edit prompt"
+              aria-label="Edit prompt"
+            >
+              <IconEdit size={16} />
             </button>
           )}
         </div>

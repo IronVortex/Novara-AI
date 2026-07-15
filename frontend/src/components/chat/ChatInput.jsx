@@ -4,6 +4,7 @@ import { MyContext } from "../../context/MyContext.jsx";
 import { useSpeech } from "../../hooks/useSpeech.js";
 import Button from "../common/Button.jsx";
 import PromptLibrary from "./PromptLibrary.jsx";
+import { IconAttach, IconBook, IconMic, IconMicOff, IconSend, IconStop } from "../common/Icons.jsx";
 
 function ChatInput({ onSend, onStop, loading, onFiles, attachments = [] }) {
   const { prompt, setPrompt, settings } = useContext(MyContext);
@@ -59,10 +60,10 @@ function ChatInput({ onSend, onStop, loading, onFiles, attachments = [] }) {
       >
         <div className="composer-toolbar">
           <button className="icon-pill" type="button" aria-label="Attach file" onClick={() => fileInputRef.current?.click()}>
-            Attach
+            <IconAttach size={18} />
           </button>
           <button className="icon-pill" type="button" aria-label="Open prompt library" onClick={() => setShowPrompts(true)}>
-            Prompts
+            <IconBook size={18} />
           </button>
           <button
             className={`icon-pill ${listening ? "active" : ""}`}
@@ -72,7 +73,7 @@ function ChatInput({ onSend, onStop, loading, onFiles, attachments = [] }) {
             disabled={!supported || !settings.speechEnabled}
             title={!supported ? "Speech recognition not supported in this browser" : undefined}
           >
-            {listening ? "Stop mic" : "Mic"}
+            {listening ? <IconMicOff size={18} /> : <IconMic size={18} />}
           </button>
           <input
             ref={fileInputRef}
@@ -108,11 +109,11 @@ function ChatInput({ onSend, onStop, loading, onFiles, attachments = [] }) {
           />
           {loading ? (
             <Button className="send-btn stop-btn" onClick={onStop} aria-label="Stop generation">
-              Stop
+              <IconStop size={18} />
             </Button>
           ) : (
             <Button className="send-btn" onClick={handleSubmit} disabled={!prompt.trim()} aria-label="Send message">
-              Send
+              <IconSend size={18} />
             </Button>
           )}
         </div>

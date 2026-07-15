@@ -16,6 +16,7 @@ import Modal from "../common/Modal.jsx";
 import ProfileDropdown from "../common/ProfileDropdown.jsx";
 import SidebarHeader from "./SidebarHeader.jsx";
 import ThreadItem from "./ThreadItem.jsx";
+import { IconSearch, IconFolder, IconArchive, IconSettings, IconSparkle } from "../common/Icons.jsx";
 import "../../styles/sidebar.css";
 
 function Sidebar({ isOpen, onClose }) {
@@ -198,7 +199,7 @@ function Sidebar({ isOpen, onClose }) {
       <SidebarHeader onNewChat={createNewChat} />
 
       <label className="search-box" htmlFor="thread-search">
-        <span aria-hidden="true">⌕</span>
+        <IconSearch size={16} className="search-icon" aria-hidden="true" />
         <input
           id="thread-search"
           value={query}
@@ -255,16 +256,20 @@ function Sidebar({ isOpen, onClose }) {
 
         <section className="sidebar-future">
           <button type="button" className="sidebar-link" disabled title="Coming soon">
-            Folders
+            <IconFolder size={18} className="sidebar-icon" />
+            <span>Folders</span>
           </button>
           <button type="button" className="sidebar-link" disabled title="Coming soon">
-            Archive
+            <IconArchive size={18} className="sidebar-icon" />
+            <span>Archive</span>
           </button>
           <button type="button" className="sidebar-link" onClick={() => navigate("/settings")}>
-            Settings
+            <IconSettings size={18} className="sidebar-icon" />
+            <span>Settings</span>
           </button>
           <button type="button" className="sidebar-upgrade" onClick={() => setToast({ type: "success", message: "Upgrade coming soon" })}>
-            Upgrade
+            <IconSparkle size={18} className="sidebar-icon" />
+            <span>Upgrade</span>
           </button>
         </section>
       </div>

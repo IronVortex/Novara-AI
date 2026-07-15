@@ -10,6 +10,14 @@ import { copyConversation, exportMarkdownFile, exportPdfFile } from "../../utils
 import { buildShareUrl } from "../../utils/helpers.js";
 import CommandPalette from "../common/CommandPalette.jsx";
 import ThemeToggle from "../common/ThemeToggle.jsx";
+import {
+  IconSearch,
+  IconMenu,
+  IconCopy,
+  IconExport,
+  IconShare,
+  IconSparkle,
+} from "../common/Icons.jsx";
 import Chat from "./Chat.jsx";
 import ChatInput from "./ChatInput.jsx";
 import ModelSelector from "./ModelSelector.jsx";
@@ -24,10 +32,12 @@ function ChatWindow({ onToggleSidebar }) {
     isAuthenticated,
     settings,
     setSettings,
+    authUser,
   } = useContext(MyContext);
   const viewportRef = useRef(null);
   const [conversationQuery, setConversationQuery] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
 
   const {
     isGenerating,
@@ -73,7 +83,7 @@ function ChatWindow({ onToggleSidebar }) {
   };
 
   const commands = [
-    { id: "new", label: "Focus message input", shortcut: "Ctrl+/", action: () => document.querySelector("textarea")?.focus() },
+    { id: "focus", label: "Focus message input", shortcut: "Ctrl+/", action: () => document.querySelector("textarea")?.focus() },
     { id: "retry", label: "Retry last message", shortcut: "Ctrl+R", action: retryLast },
     { id: "export-md", label: "Export markdown", shortcut: "Ctrl+E", action: () => handleExport("md") },
     { id: "sidebar", label: "Toggle sidebar", shortcut: "Ctrl+B", action: onToggleSidebar },
@@ -87,35 +97,109 @@ function ChatWindow({ onToggleSidebar }) {
     "ctrl+b": () => onToggleSidebar?.(),
   });
 
+  const greeting = isAuthenticated && authUser?.name
+    ? `Hi, ${authUser.name.split(" ")[0]}`
+    : APP_NAME;
+
   return (
     <main className="chat-shell">
+      {/* ── Header ─────────────────────────────────── */}
       <header className="chat-header glass-card">
-        <div>
-          <p className="eyebrow">Intelligent workspace</p>
-          <h1>{APP_NAME}</h1>
+        <div className="chat-header-left">
+          <button
+            className="icon-pill mobile-only"
+            type="button"
+            onClick={onToggleSidebar}
+            aria-label="Toggle sidebar"
+          >
+            <IconMenu size={18} />
+          </button>
+          <div className="chat-title">
+            <span className="chat-header-eyebrow">
+              <IconSparkle size={12} />
+              Intelligent workspace
+            </span>
+            <h1>{greeting}</h1>
+          </div>
         </div>
+
         <div className="chat-header-actions">
           <ModelSelector
             provider={settings.provider}
             model={settings.model}
             onChange={(next) => setSettings(next)}
           />
-          <label className="inline-search">
-            <span aria-hidden="true">⌕</span>
-            <input
-              value={conversationQuery}
-              onChange={(event) => setConversationQuery(event.target.value)}
-              placeholder="Search in conversation"
-              aria-label="Search in conversation"
-            />
-          </label>
+
+          {/* Inline search — toggleable */}
+          {searchVisible ? (
+            <label className="inline-search inline-search--active">
+              <IconSearch size={15} />
+              <input
+                value={conversationQuery}
+                onChange={(e) => setConversationQuery(e.target.value)}
+                placeholder="Search in conversation…"
+                aria-label="Search in conversation"
+                autoFocus
+                onBlur={() => { if (!conversationQuery) setSearchVisible(false); }}
+              />
+            </label>
+          ) : (
+            <button
+              className="icon-pill"
+              type="button"
+              aria-label="Search conversation"
+              onClick={() => setSearchVisible(true)}
+              title="Search (Ctrl+F)"
+            >
+              <IconSearch size={16} />
+            </button>
+          )}
+
           <ThemeToggle />
-          <button className="icon-pill mobile-only" type="button" onClick={onToggleSidebar} aria-label="Toggle sidebar">
-            ☰
-          </button>
+
+          {/* Quick-action pills — desktop */}
+          {prevChats.length > 0 ? (
+            <div className="chat-header-quick desktop-only">
+              <button
+                type="button"
+                className="icon-pill"
+                title="Copy all"
+                aria-label="Copy entire conversation"
+                onClick={() =>
+                  copyConversation(prevChats).then(() =>
+                    setToast({ type: "success", message: "Conversation copied" })
+                  )
+                }
+              >
+                <IconCopy size={15} />
+              </button>
+              <button
+                type="button"
+                className="icon-pill"
+                title="Export markdown"
+                aria-label="Export as Markdown"
+                onClick={() => handleExport("md")}
+              >
+                <IconExport size={15} />
+              </button>
+              <button
+                type="button"
+                className="icon-pill"
+                title="Share conversation"
+                aria-label="Copy share link"
+                onClick={() => {
+                  navigator.clipboard.writeText(buildShareUrl(currThreadId));
+                  setToast({ type: "success", message: "Share link copied" });
+                }}
+              >
+                <IconShare size={15} />
+              </button>
+            </div>
+          ) : null}
         </div>
       </header>
 
+      {/* ── Error banner ───────────────────────────── */}
       {error ? (
         <div className="feedback error" role="alert">
           <span>{error}</span>
@@ -125,6 +209,7 @@ function ChatWindow({ onToggleSidebar }) {
         </div>
       ) : null}
 
+      {/* ── Messages pane ──────────────────────────── */}
       <section className="messages-pane glass-card" ref={viewportRef}>
         <Chat
           loading={isGenerating}
@@ -136,11 +221,14 @@ function ChatWindow({ onToggleSidebar }) {
           threadId={currThreadId}
           conversationQuery={conversationQuery}
           onMetaChange={(index, updated) => {
-            setPrevChats((prev) => prev.map((item, i) => (i === index ? { ...item, ...updated } : item)));
+            setPrevChats((prev) =>
+              prev.map((item, i) => (i === index ? { ...item, ...updated } : item))
+            );
           }}
         />
       </section>
 
+      {/* ── Composer ───────────────────────────────── */}
       <ChatInput
         onSend={sendChat}
         onStop={stopGeneration}
@@ -149,33 +237,12 @@ function ChatWindow({ onToggleSidebar }) {
         attachments={attachments}
       />
 
-      <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
-
-      <div className="chat-quick-actions">
-        <button
-          type="button"
-          onClick={() =>
-            copyConversation(prevChats).then(() => setToast({ type: "success", message: "Conversation copied" }))
-          }
-        >
-          Copy all
-        </button>
-        <button type="button" onClick={() => handleExport("md")}>
-          Export MD
-        </button>
-        <button type="button" onClick={() => handleExport("pdf")}>
-          Export PDF
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            navigator.clipboard.writeText(buildShareUrl(currThreadId));
-            setToast({ type: "success", message: "Share link copied" });
-          }}
-        >
-          Share
-        </button>
-      </div>
+      {/* ── Command palette ────────────────────────── */}
+      <CommandPalette
+        isOpen={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={commands}
+      />
     </main>
   );
 }

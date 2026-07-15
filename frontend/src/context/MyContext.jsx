@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from "../constants/index.js";
 import { logoutUser } from "../services/api.js";
@@ -51,7 +51,7 @@ export function MyContextProvider({ children }) {
     setCurrThreadId(uuidv4());
   };
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await logoutUser();
     } catch {
@@ -70,7 +70,7 @@ export function MyContextProvider({ children }) {
     resetChatState();
     setAuthReady(true);
     setToast({ type: "success", message: "Signed out successfully" });
-  };
+  }, []);
 
   const providerValue = useMemo(
     () => ({
@@ -108,6 +108,7 @@ export function MyContextProvider({ children }) {
       currThreadId,
       prevChats,
       newChat,
+      logout,
       allThreads,
       authUser,
       token,

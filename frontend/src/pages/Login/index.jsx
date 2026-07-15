@@ -7,6 +7,7 @@ import {
   isFirebaseConfigured,
   toFirebaseIdentity,
 } from "../../services/firebase.js";
+import { IconGoogle } from "../../components/common/Icons.jsx";
 import "../../styles/auth.css";
 
 function Login() {
@@ -28,15 +29,11 @@ function Login() {
     setAuthReady(true);
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setLoading(true);
-
     try {
-      const response = await loginUser({
-        email: form.email,
-        password: form.password,
-      });
+      const response = await loginUser({ email: form.email, password: form.password });
       persistSession(response, form.rememberMe);
       setToast({ type: "success", message: "Welcome back to Novara AI" });
       navigate("/app");
@@ -64,6 +61,29 @@ function Login() {
 
   return (
     <div className="auth-shell">
+      {/* ── Left Hero Panel ─────────────────────── */}
+      <div className="auth-hero">
+        <div className="auth-hero-glow" />
+        <Link to="/" className="auth-hero-brand">
+          <div className="brand-mark">N</div>
+          <span>Novara AI</span>
+        </Link>
+        <h2 className="auth-hero-headline">Your intelligent<br />AI workspace</h2>
+        <p className="auth-hero-tagline">
+          Think, write, and build with an AI that stays out of the way.
+          Cloud sync when you need it. Guest mode when you don't.
+        </p>
+        <div className="auth-hero-features">
+          {["Streaming AI responses", "Guest mode — no account needed", "Cloud history sync", "Voice input & read aloud"].map((f) => (
+            <div key={f} className="auth-hero-feature">
+              <div className="auth-hero-feature-dot" />
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Right Form Panel ────────────────────── */}
       <div className="auth-card">
         <div className="auth-brand">
           <div className="brand-mark">N</div>
@@ -81,7 +101,7 @@ function Login() {
               value={form.email}
               required
               autoComplete="email"
-              onChange={(event) => setForm({ ...form, email: event.target.value })}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
           </label>
 
@@ -93,7 +113,7 @@ function Login() {
               required
               minLength={6}
               autoComplete="current-password"
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
           </label>
 
@@ -102,28 +122,35 @@ function Login() {
               <input
                 type="checkbox"
                 checked={form.rememberMe}
-                onChange={(event) => setForm({ ...form, rememberMe: event.target.checked })}
+                onChange={(e) => setForm({ ...form, rememberMe: e.target.checked })}
               />
               Remember me
             </label>
-            <Link to="/forgot-password" className="auth-link">
-              Forgot password?
-            </Link>
+            <Link to="/forgot-password" className="auth-link">Forgot password?</Link>
           </div>
 
           <button className="auth-btn" type="submit" disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
         {isFirebaseConfigured ? (
-          <button type="button" className="auth-google" onClick={handleGoogle} disabled={loading}>
-            Continue with Google
-          </button>
+          <>
+            <div className="auth-divider">or</div>
+            <button
+              type="button"
+              className="auth-google"
+              onClick={handleGoogle}
+              disabled={loading}
+            >
+              <IconGoogle size={18} />
+              Continue with Google
+            </button>
+          </>
         ) : null}
 
         <p className="auth-switch">
-          Need an account? <Link to="/register">Create one</Link>
+          No account? <Link to="/register">Create one free</Link>
         </p>
         <p className="auth-switch">
           Or <Link to="/app">continue as guest</Link>

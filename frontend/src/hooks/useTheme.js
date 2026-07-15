@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { THEME_STORAGE_KEY, THEMES } from "../constants/index.js";
 
 export function useTheme() {

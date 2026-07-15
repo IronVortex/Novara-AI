@@ -6,10 +6,11 @@ function CommandPalette({ isOpen, onClose, commands = [] }) {
 
   useEffect(() => {
     if (isOpen) {
-      setQuery("");
       inputRef.current?.focus();
     }
   }, [isOpen]);
+
+
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
