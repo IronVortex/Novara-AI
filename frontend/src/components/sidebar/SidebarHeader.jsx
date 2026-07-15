@@ -1,16 +1,17 @@
+import { Link } from "react-router-dom";
 import { APP_NAME } from "../../constants/index.js";
 import Button from "../common/Button.jsx";
 
 function SidebarHeader({ onNewChat }) {
   return (
     <div className="sidebar-header">
-      <div className="brand-block">
+      <Link to="/" className="brand-block" aria-label={`${APP_NAME} home`}>
         <div className="brand-mark">N</div>
         <div>
           <h2>{APP_NAME}</h2>
-          <p>Premium AI workspace</p>
+          <p>Intelligent workspace</p>
         </div>
-      </div>
+      </Link>
       <Button className="sidebar-create-btn" onClick={onNewChat}>
         + New chat
       </Button>

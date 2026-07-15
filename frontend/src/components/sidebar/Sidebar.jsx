@@ -1,8 +1,15 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { MyContext } from "../../context/MyContext.jsx";
 import { deleteThread, exportThread, getThread, getThreads, updateThread } from "../../services/api.js";
+import {
+  deleteGuestThread,
+  exportGuestMarkdown,
+  getGuestThread,
+  getGuestThreads,
+  updateGuestThreadMeta,
+} from "../../services/guestStorage.js";
 import { copyConversation, exportMarkdownFile } from "../../utils/exportChat.js";
 import { buildShareUrl, normalizeThreads, sortThreads } from "../../utils/helpers.js";
 import Modal from "../common/Modal.jsx";
@@ -25,8 +32,11 @@ function Sidebar({ isOpen, onClose }) {
     logout,
     setToast,
     prevChats,
+    isAuthenticated,
+    sidebarCollapsed,
   } = useContext(MyContext);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [query, setQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -35,16 +45,64 @@ function Sidebar({ isOpen, onClose }) {
 
   const loadThreads = useCallback(async () => {
     try {
-      const threads = await getThreads();
-      setAllThreads(sortThreads(normalizeThreads(threads)));
-    } catch (error) {
-      console.error(error);
+      if (isAuthenticated) {
+        const threads = await getThreads();
+        setAllThreads(sortThreads(normalizeThreads(threads)));
+      } else {
+        setAllThreads(sortThreads(normalizeThreads(getGuestThreads())));
+      }
+    } catch {
+      // Keep sidebar usable offline for guests.
     }
-  }, [setAllThreads]);
+  }, [isAuthenticated, setAllThreads]);
 
   useEffect(() => {
     loadThreads();
   }, [loadThreads]);
+
+  const createNewChat = useCallback(() => {
+    setNewChat(true);
+    setPrompt("");
+    setReply(null);
+    setCurrThreadId(uuidv4());
+    setPrevChats([]);
+    onClose?.();
+  }, [onClose, setCurrThreadId, setNewChat, setPrevChats, setPrompt, setReply]);
+
+  const changeThread = useCallback(
+    async (newThreadId) => {
+      setCurrThreadId(newThreadId);
+      setNewChat(false);
+      onClose?.();
+
+      try {
+        if (isAuthenticated) {
+          const response = await getThread(newThreadId);
+          setPrevChats(response.messages || response || []);
+        } else {
+          const thread = getGuestThread(newThreadId);
+          setPrevChats(thread?.messages || []);
+        }
+        setReply(null);
+      } catch {
+        setToast({ type: "error", message: "Unable to open conversation" });
+      }
+    },
+    [isAuthenticated, onClose, setCurrThreadId, setNewChat, setPrevChats, setReply, setToast]
+  );
+
+  useEffect(() => {
+    const threadId = searchParams.get("thread");
+    if (!threadId) return undefined;
+
+    changeThread(threadId);
+    const next = new URLSearchParams(searchParams);
+    next.delete("thread");
+    setSearchParams(next, { replace: true });
+    return undefined;
+    // Intentionally run once when thread query is present.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredThreads = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -58,32 +116,13 @@ function Sidebar({ isOpen, onClose }) {
     );
   }, [allThreads, query]);
 
-  const createNewChat = () => {
-    setNewChat(true);
-    setPrompt("");
-    setReply(null);
-    setCurrThreadId(uuidv4());
-    setPrevChats([]);
-    onClose?.();
-  };
-
-  const changeThread = async (newThreadId) => {
-    setCurrThreadId(newThreadId);
-    setNewChat(false);
-    onClose?.();
-
-    try {
-      const response = await getThread(newThreadId);
-      setPrevChats(response.messages || response || []);
-      setReply(null);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const pinnedThreads = filteredThreads.filter((thread) => thread.isPinned);
+  const recentThreads = filteredThreads.filter((thread) => !thread.isPinned);
 
   const handleDeleteThread = async (threadId) => {
     try {
-      await deleteThread(threadId);
+      if (isAuthenticated) await deleteThread(threadId);
+      else deleteGuestThread(threadId);
       setAllThreads((prev) => prev.filter((thread) => thread.threadId !== threadId));
       if (threadId === currThreadId) createNewChat();
       setToast({ type: "success", message: "Conversation deleted" });
@@ -96,7 +135,11 @@ function Sidebar({ isOpen, onClose }) {
 
   const handleToggleMeta = async (thread, field) => {
     try {
-      await updateThread(thread.threadId, { [field]: !thread[field] });
+      if (isAuthenticated) {
+        await updateThread(thread.threadId, { [field]: !thread[field] });
+      } else {
+        updateGuestThreadMeta(thread.threadId, { [field]: !thread[field] });
+      }
       setAllThreads((prev) =>
         prev.map((item) =>
           item.threadId === thread.threadId ? { ...item, [field]: !item[field] } : item
@@ -110,7 +153,11 @@ function Sidebar({ isOpen, onClose }) {
   const handleRename = async () => {
     if (!renameTarget || !renameValue.trim()) return;
     try {
-      await updateThread(renameTarget.threadId, { title: renameValue.trim() });
+      if (isAuthenticated) {
+        await updateThread(renameTarget.threadId, { title: renameValue.trim() });
+      } else {
+        updateGuestThreadMeta(renameTarget.threadId, { title: renameValue.trim() });
+      }
       setAllThreads((prev) =>
         prev.map((item) =>
           item.threadId === renameTarget.threadId ? { ...item, title: renameValue.trim() } : item
@@ -125,53 +172,110 @@ function Sidebar({ isOpen, onClose }) {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
   };
 
   const handleExport = async () => {
-    const response = await exportThread(currThreadId);
-    exportMarkdownFile(response.markdown, response.title);
-    setToast({ type: "success", message: "Chat exported" });
+    try {
+      if (isAuthenticated) {
+        const response = await exportThread(currThreadId);
+        exportMarkdownFile(response.markdown, response.title);
+      } else {
+        const response = exportGuestMarkdown(currThreadId);
+        if (!response) throw new Error("Nothing to export");
+        exportMarkdownFile(response.markdown, response.title);
+      }
+      setToast({ type: "success", message: "Chat exported" });
+    } catch (error) {
+      setToast({ type: "error", message: error.message });
+    }
   };
 
   return (
-    <aside className={`sidebar ${isOpen ? "open" : ""}`}>
+    <aside className={`sidebar ${isOpen ? "open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}>
       <SidebarHeader onNewChat={createNewChat} />
 
       <label className="search-box" htmlFor="thread-search">
-        <span>⌕</span>
+        <span aria-hidden="true">⌕</span>
         <input
           id="thread-search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search conversations"
-          aria-label="Search conversations"
+          placeholder="Search chats"
+          aria-label="Search chats"
         />
       </label>
 
-      <ul className="thread-list" aria-label="Conversation history">
-        {filteredThreads.map((thread) => (
-          <ThreadItem
-            key={thread.threadId}
-            thread={thread}
-            active={thread.threadId === currThreadId}
-            onSelect={changeThread}
-            onDelete={setDeleteTarget}
-            onRename={(item) => {
-              setRenameTarget(item);
-              setRenameValue(item.title);
-            }}
-            onTogglePin={() => handleToggleMeta(thread, "isPinned")}
-            onToggleFavorite={() => handleToggleMeta(thread, "isFavorite")}
-          />
-        ))}
-      </ul>
+      <div className="sidebar-sections">
+        {pinnedThreads.length ? (
+          <section>
+            <h3 className="sidebar-section-title">Pinned</h3>
+            <ul className="thread-list" aria-label="Pinned chats">
+              {pinnedThreads.map((thread) => (
+                <ThreadItem
+                  key={thread.threadId}
+                  thread={thread}
+                  active={thread.threadId === currThreadId}
+                  onSelect={changeThread}
+                  onDelete={setDeleteTarget}
+                  onRename={(item) => {
+                    setRenameTarget(item);
+                    setRenameValue(item.title);
+                  }}
+                  onTogglePin={() => handleToggleMeta(thread, "isPinned")}
+                  onToggleFavorite={() => handleToggleMeta(thread, "isFavorite")}
+                />
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <section>
+          <h3 className="sidebar-section-title">Recent</h3>
+          <ul className="thread-list" aria-label="Recent chats">
+            {recentThreads.map((thread) => (
+              <ThreadItem
+                key={thread.threadId}
+                thread={thread}
+                active={thread.threadId === currThreadId}
+                onSelect={changeThread}
+                onDelete={setDeleteTarget}
+                onRename={(item) => {
+                  setRenameTarget(item);
+                  setRenameValue(item.title);
+                }}
+                onTogglePin={() => handleToggleMeta(thread, "isPinned")}
+                onToggleFavorite={() => handleToggleMeta(thread, "isFavorite")}
+              />
+            ))}
+          </ul>
+        </section>
+
+        <section className="sidebar-future">
+          <button type="button" className="sidebar-link" disabled title="Coming soon">
+            Folders
+          </button>
+          <button type="button" className="sidebar-link" disabled title="Coming soon">
+            Archive
+          </button>
+          <button type="button" className="sidebar-link" onClick={() => navigate("/settings")}>
+            Settings
+          </button>
+          <button type="button" className="sidebar-upgrade" onClick={() => setToast({ type: "success", message: "Upgrade coming soon" })}>
+            Upgrade
+          </button>
+        </section>
+      </div>
 
       <div className="sidebar-footer">
+        {!isAuthenticated ? (
+          <p className="guest-banner">Guest mode · history stays on this device</p>
+        ) : null}
         <ProfileDropdown
           user={authUser}
+          isAuthenticated={isAuthenticated}
           onLogout={handleLogout}
           onExport={handleExport}
           onCopy={() => copyConversation(prevChats).then(() => setToast({ type: "success", message: "Copied" }))}
@@ -185,7 +289,9 @@ function Sidebar({ isOpen, onClose }) {
       <Modal isOpen={Boolean(deleteTarget)} title="Delete conversation?" onClose={() => setDeleteTarget(null)}>
         <p>This action cannot be undone.</p>
         <div className="modal-actions">
-          <button type="button" onClick={() => setDeleteTarget(null)}>Cancel</button>
+          <button type="button" onClick={() => setDeleteTarget(null)}>
+            Cancel
+          </button>
           <button type="button" className="danger" onClick={() => handleDeleteThread(deleteTarget.threadId)}>
             Delete
           </button>
@@ -195,8 +301,12 @@ function Sidebar({ isOpen, onClose }) {
       <Modal isOpen={Boolean(renameTarget)} title="Rename conversation" onClose={() => setRenameTarget(null)}>
         <input value={renameValue} onChange={(event) => setRenameValue(event.target.value)} />
         <div className="modal-actions">
-          <button type="button" onClick={() => setRenameTarget(null)}>Cancel</button>
-          <button type="button" onClick={handleRename}>Save</button>
+          <button type="button" onClick={() => setRenameTarget(null)}>
+            Cancel
+          </button>
+          <button type="button" onClick={handleRename}>
+            Save
+          </button>
         </div>
       </Modal>
     </aside>

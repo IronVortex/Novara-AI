@@ -5,16 +5,26 @@ import { useChat } from "../../hooks/useChat.js";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts.js";
 import { useSpeech } from "../../hooks/useSpeech.js";
 import { exportThread } from "../../services/api.js";
+import { exportGuestMarkdown } from "../../services/guestStorage.js";
 import { copyConversation, exportMarkdownFile, exportPdfFile } from "../../utils/exportChat.js";
 import { buildShareUrl } from "../../utils/helpers.js";
 import CommandPalette from "../common/CommandPalette.jsx";
 import ThemeToggle from "../common/ThemeToggle.jsx";
 import Chat from "./Chat.jsx";
 import ChatInput from "./ChatInput.jsx";
+import ModelSelector from "./ModelSelector.jsx";
 import "../../styles/chat.css";
 
 function ChatWindow({ onToggleSidebar }) {
-  const { prevChats, currThreadId, setToast } = useContext(MyContext);
+  const {
+    prevChats,
+    currThreadId,
+    setToast,
+    setPrevChats,
+    isAuthenticated,
+    settings,
+    setSettings,
+  } = useContext(MyContext);
   const viewportRef = useRef(null);
   const [conversationQuery, setConversationQuery] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -40,9 +50,22 @@ function ChatWindow({ onToggleSidebar }) {
 
   const handleExport = async (format) => {
     try {
-      const response = await exportThread(currThreadId);
-      if (format === "md") exportMarkdownFile(response.markdown, response.title);
-      if (format === "pdf") await exportPdfFile(prevChats, response.title);
+      let title = "Novara Chat";
+      let markdown = "";
+
+      if (isAuthenticated) {
+        const response = await exportThread(currThreadId);
+        title = response.title;
+        markdown = response.markdown;
+      } else {
+        const response = exportGuestMarkdown(currThreadId);
+        if (!response) throw new Error("Nothing to export yet");
+        title = response.title;
+        markdown = response.markdown;
+      }
+
+      if (format === "md") exportMarkdownFile(markdown, title);
+      if (format === "pdf") await exportPdfFile(prevChats, title);
       setToast({ type: "success", message: "Conversation exported" });
     } catch (exportError) {
       setToast({ type: "error", message: exportError.message });
@@ -68,28 +91,37 @@ function ChatWindow({ onToggleSidebar }) {
     <main className="chat-shell">
       <header className="chat-header glass-card">
         <div>
-          <p className="eyebrow">Premium AI Workspace</p>
+          <p className="eyebrow">Intelligent workspace</p>
           <h1>{APP_NAME}</h1>
         </div>
         <div className="chat-header-actions">
+          <ModelSelector
+            provider={settings.provider}
+            model={settings.model}
+            onChange={(next) => setSettings(next)}
+          />
           <label className="inline-search">
-            <span>⌕</span>
+            <span aria-hidden="true">⌕</span>
             <input
               value={conversationQuery}
               onChange={(event) => setConversationQuery(event.target.value)}
               placeholder="Search in conversation"
+              aria-label="Search in conversation"
             />
           </label>
           <ThemeToggle />
-          <button className="icon-pill mobile-only" type="button" onClick={onToggleSidebar}>☰</button>
-          <div className="status-pill">● Live</div>
+          <button className="icon-pill mobile-only" type="button" onClick={onToggleSidebar} aria-label="Toggle sidebar">
+            ☰
+          </button>
         </div>
       </header>
 
       {error ? (
-        <div className="feedback error">
+        <div className="feedback error" role="alert">
           <span>{error}</span>
-          <button type="button" onClick={retryLast}>Retry</button>
+          <button type="button" onClick={retryLast}>
+            Retry
+          </button>
         </div>
       ) : null}
 
@@ -103,9 +135,8 @@ function ChatWindow({ onToggleSidebar }) {
           onSpeak={speak}
           threadId={currThreadId}
           conversationQuery={conversationQuery}
-          onMetaChange={(index, message) => {
-            // meta updates handled via API; optional local refresh
-            console.debug("message meta updated", index, message);
+          onMetaChange={(index, updated) => {
+            setPrevChats((prev) => prev.map((item, i) => (i === index ? { ...item, ...updated } : item)));
           }}
         />
       </section>
@@ -121,11 +152,20 @@ function ChatWindow({ onToggleSidebar }) {
       <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
 
       <div className="chat-quick-actions">
-        <button type="button" onClick={() => copyConversation(prevChats).then(() => setToast({ type: "success", message: "Conversation copied" }))}>
+        <button
+          type="button"
+          onClick={() =>
+            copyConversation(prevChats).then(() => setToast({ type: "success", message: "Conversation copied" }))
+          }
+        >
           Copy all
         </button>
-        <button type="button" onClick={() => handleExport("md")}>Export MD</button>
-        <button type="button" onClick={() => handleExport("pdf")}>Export PDF</button>
+        <button type="button" onClick={() => handleExport("md")}>
+          Export MD
+        </button>
+        <button type="button" onClick={() => handleExport("pdf")}>
+          Export PDF
+        </button>
         <button
           type="button"
           onClick={() => {

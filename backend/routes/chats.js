@@ -10,14 +10,16 @@ import {
   exportThread,
   getAllThreads,
   getThreadMessages,
+  guestChatStream,
   regenerateResponse,
   updateMessageMeta,
   updateThread,
   uploadDocument,
 } from "../controllers/chatController.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
-import { protect } from "../middleware/authMiddleware.js";
-import { validateChatRequest, validateThreadParam } from "../middleware/validateRequest.js";
+import { optionalAuth, protect } from "../middleware/authMiddleware.js";
+import { guestLimiter } from "../middleware/rateLimiter.js";
+import { validateChatRequest, validateGuestChatRequest, validateThreadParam } from "../middleware/validateRequest.js";
 
 const router = express.Router();
 const upload = multer({
@@ -33,10 +35,11 @@ router.patch("/thread/:threadId", protect, validateThreadParam, asyncHandler(upd
 router.delete("/thread/:threadId", protect, validateThreadParam, asyncHandler(deleteThread));
 router.post("/chat", protect, validateChatRequest, asyncHandler(chatWithThread));
 router.post("/chat/stream", protect, validateChatRequest, asyncHandler(chatWithThreadStream));
+router.post("/guest/stream", guestLimiter, validateGuestChatRequest, asyncHandler(guestChatStream));
 router.post("/regenerate", protect, asyncHandler(regenerateResponse));
 router.post("/continue", protect, asyncHandler(continueGeneration));
 router.post("/edit", protect, asyncHandler(editPrompt));
 router.patch("/message", protect, asyncHandler(updateMessageMeta));
-router.post("/upload", protect, upload.single("file"), asyncHandler(uploadDocument));
+router.post("/upload", optionalAuth, guestLimiter, upload.single("file"), asyncHandler(uploadDocument));
 
 export default router;

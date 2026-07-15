@@ -2,7 +2,7 @@ import { useContext, useMemo } from "react";
 import { MyContext } from "../../context/MyContext.jsx";
 import ChatMessage from "./ChatMessage.jsx";
 import Skeleton from "../common/Skeleton.jsx";
-import { APP_NAME } from "../../constants/index.js";
+import { APP_NAME, APP_TAGLINE } from "../../constants/index.js";
 
 function Chat({
   loading,
@@ -15,7 +15,7 @@ function Chat({
   onMetaChange,
   conversationQuery,
 }) {
-  const { newChat, prevChats } = useContext(MyContext);
+  const { newChat, prevChats, isAuthenticated, settings } = useContext(MyContext);
 
   const visibleMessages = useMemo(() => {
     const query = conversationQuery.trim().toLowerCase();
@@ -28,8 +28,11 @@ function Chat({
       {newChat && !prevChats.length ? (
         <div className="empty-state">
           <div className="empty-badge">✦</div>
-          <h3>Start your next conversation with {APP_NAME}</h3>
-          <p>Ask for ideas, summaries, code help, or upload a document to chat with it.</p>
+          <h3>{APP_TAGLINE}</h3>
+          <p>
+            Start chatting instantly{isAuthenticated ? "" : " as a guest"}. Ask for ideas, code help, or upload a
+            document — {APP_NAME} stays out of the way.
+          </p>
         </div>
       ) : null}
 
@@ -38,18 +41,20 @@ function Chat({
         {visibleMessages.map((chat) => {
           const index = prevChats.findIndex((message) => message === chat);
           return (
-          <ChatMessage
-            key={`${chat.role}-${index}-${chat.content?.slice(0, 12)}`}
-            message={chat}
-            index={index}
-            isStreaming={isGenerating && index === prevChats.length - 1 && chat.role === "assistant"}
-            onRegenerate={onRegenerate}
-            onEdit={onEdit}
-            onContinue={onContinue}
-            onSpeak={onSpeak}
-            threadId={threadId}
-            onMetaChange={onMetaChange}
-          />
+            <ChatMessage
+              key={`${chat.role}-${index}-${chat.content?.slice(0, 12)}`}
+              message={chat}
+              index={index}
+              isStreaming={isGenerating && index === prevChats.length - 1 && chat.role === "assistant"}
+              onRegenerate={onRegenerate}
+              onEdit={onEdit}
+              onContinue={onContinue}
+              onSpeak={onSpeak}
+              threadId={threadId}
+              onMetaChange={onMetaChange}
+              isAuthenticated={isAuthenticated}
+              speechEnabled={settings.speechEnabled}
+            />
           );
         })}
       </div>

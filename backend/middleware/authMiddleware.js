@@ -1,29 +1,51 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-export const protect = async (req, res, next) => {
-  const authorization = req.headers.authorization;
-  let token;
-
+const extractBearer = (authorization) => {
   if (authorization && authorization.startsWith("Bearer ")) {
-    token = authorization.split(" ")[1];
+    return authorization.split(" ")[1];
   }
+  return null;
+};
+
+const attachUserFromToken = async (token) => {
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const user = await User.findById(decoded.id).select("-password");
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 401;
+    throw error;
+  }
+  return user;
+};
+
+export const protect = async (req, res, next) => {
+  const token = extractBearer(req.headers.authorization);
 
   if (!token) {
     return res.status(401).json({ error: "Not authorized, no token provided" });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
-
-    if (!user) {
-      return res.status(401).json({ error: "User not found" });
-    }
-
-    req.user = user;
+    req.user = await attachUserFromToken(token);
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({ error: "Not authorized, token failed" });
   }
+};
+
+/** Attaches req.user when a valid token is present; continues as guest otherwise. */
+export const optionalAuth = async (req, res, next) => {
+  const token = extractBearer(req.headers.authorization);
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    req.user = await attachUserFromToken(token);
+  } catch {
+    req.user = null;
+  }
+  next();
 };

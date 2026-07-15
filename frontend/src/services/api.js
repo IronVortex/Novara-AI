@@ -23,37 +23,8 @@ const request = async (path, options = {}) => {
   return data;
 };
 
-export const loginUser = async (payload) =>
-  request("/auth/login", { method: "POST", body: JSON.stringify(payload) });
-
-export const registerUser = async (payload) =>
-  request("/auth/register", { method: "POST", body: JSON.stringify(payload) });
-
-export const getMe = async () => request("/auth/me");
-export const logoutUser = async () => request("/auth/logout", { method: "POST" });
-
-export const sendMessage = async (payload) =>
-  request("/chats/chat", { method: "POST", body: JSON.stringify(payload) });
-
-export const sendMessageStream = async (payload, handlers = {}) => {
-  const { onChunk, onDone, onError, signal } = handlers;
-  const token = getStoredToken();
-
-  const response = await fetch(`${API_BASE_URL}/chats/chat/stream`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(payload),
-    signal,
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || "Stream request failed");
-  }
-
+const consumeSseStream = async (response, handlers = {}) => {
+  const { onChunk, onDone, onError } = handlers;
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -84,6 +55,68 @@ export const sendMessageStream = async (payload, handlers = {}) => {
       if (eventName === "error") onError?.(new Error(parsed.error));
     }
   }
+};
+
+export const loginUser = async (payload) =>
+  request("/auth/login", { method: "POST", body: JSON.stringify(payload) });
+
+export const registerUser = async (payload) =>
+  request("/auth/register", { method: "POST", body: JSON.stringify(payload) });
+
+export const loginWithFirebase = async (payload) =>
+  request("/auth/firebase", { method: "POST", body: JSON.stringify(payload) });
+
+export const getMe = async () => request("/auth/me");
+export const logoutUser = async () => request("/auth/logout", { method: "POST" });
+export const getModels = async () => request("/auth/models");
+export const updateProfile = async (payload) =>
+  request("/auth/profile", { method: "PATCH", body: JSON.stringify(payload) });
+export const updatePreferences = async (payload) =>
+  request("/auth/preferences", { method: "PATCH", body: JSON.stringify(payload) });
+export const deleteAccount = async () => request("/auth/account", { method: "DELETE" });
+export const clearAllChats = async () => request("/auth/chats", { method: "DELETE" });
+
+export const sendMessage = async (payload) =>
+  request("/chats/chat", { method: "POST", body: JSON.stringify(payload) });
+
+export const sendMessageStream = async (payload, handlers = {}) => {
+  const { onChunk, onDone, onError, signal } = handlers;
+  const token = getStoredToken();
+
+  const response = await fetch(`${API_BASE_URL}/chats/chat/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || "Stream request failed");
+  }
+
+  await consumeSseStream(response, { onChunk, onDone, onError });
+};
+
+export const sendGuestMessageStream = async (payload, handlers = {}) => {
+  const { onChunk, onDone, onError, signal } = handlers;
+
+  const response = await fetch(`${API_BASE_URL}/chats/guest/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal,
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || "Guest stream request failed");
+  }
+
+  await consumeSseStream(response, { onChunk, onDone, onError });
 };
 
 export const regenerateMessage = async (payload) =>

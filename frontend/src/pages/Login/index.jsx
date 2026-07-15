@@ -1,14 +1,32 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MyContext } from "../../context/MyContext.jsx";
-import { loginUser } from "../../services/api.js";
+import { loginUser, loginWithFirebase } from "../../services/api.js";
+import {
+  firebaseGoogleLogin,
+  isFirebaseConfigured,
+  toFirebaseIdentity,
+} from "../../services/firebase.js";
 import "../../styles/auth.css";
 
 function Login() {
   const navigate = useNavigate();
-  const { setAuthUser, setToken, setToast, setAuthReady } = useContext(MyContext);
+  const { setAuthUser, setToken, setToast, setAuthReady, setSettings } = useContext(MyContext);
   const [form, setForm] = useState({ email: "", password: "", rememberMe: true });
   const [loading, setLoading] = useState(false);
+
+  const persistSession = (response, rememberMe) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    localStorage.removeItem("novara-token");
+    sessionStorage.removeItem("novara-token");
+    storage.setItem("novara-token", response.token);
+    setToken(response.token);
+    setAuthUser(response.user);
+    if (response.user?.preferences) {
+      setSettings((prev) => ({ ...prev, ...response.user.preferences }));
+    }
+    setAuthReady(true);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -19,17 +37,26 @@ function Login() {
         email: form.email,
         password: form.password,
       });
-      const storage = form.rememberMe ? localStorage : sessionStorage;
-      localStorage.removeItem("novara-token");
-      sessionStorage.removeItem("novara-token");
-      storage.setItem("novara-token", response.token);
-      setToken(response.token);
-      setAuthUser(response.user);
-      setAuthReady(true);
+      persistSession(response, form.rememberMe);
       setToast({ type: "success", message: "Welcome back to Novara AI" });
-      navigate("/");
+      navigate("/app");
     } catch (error) {
       setToast({ type: "error", message: error.message || "Unable to sign you in" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    try {
+      const user = await firebaseGoogleLogin();
+      const response = await loginWithFirebase(toFirebaseIdentity(user, "google"));
+      persistSession(response, true);
+      setToast({ type: "success", message: "Signed in with Google" });
+      navigate("/app");
+    } catch (error) {
+      setToast({ type: "error", message: error.message || "Google sign-in failed" });
     } finally {
       setLoading(false);
     }
@@ -70,22 +97,36 @@ function Login() {
             />
           </label>
 
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={form.rememberMe}
-              onChange={(event) => setForm({ ...form, rememberMe: event.target.checked })}
-            />
-            Remember me
-          </label>
+          <div className="auth-row">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={form.rememberMe}
+                onChange={(event) => setForm({ ...form, rememberMe: event.target.checked })}
+              />
+              Remember me
+            </label>
+            <Link to="/forgot-password" className="auth-link">
+              Forgot password?
+            </Link>
+          </div>
 
           <button className="auth-btn" type="submit" disabled={loading}>
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
+        {isFirebaseConfigured ? (
+          <button type="button" className="auth-google" onClick={handleGoogle} disabled={loading}>
+            Continue with Google
+          </button>
+        ) : null}
+
         <p className="auth-switch">
           Need an account? <Link to="/register">Create one</Link>
+        </p>
+        <p className="auth-switch">
+          Or <Link to="/app">continue as guest</Link>
         </p>
       </div>
     </div>

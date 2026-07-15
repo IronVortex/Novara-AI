@@ -309,6 +309,13 @@ export const uploadDocument = async (req, res) => {
     const { default: pdfParse } = await import("pdf-parse");
     const parsed = await pdfParse(req.file.buffer);
     content = parsed.text || "";
+  } else if (
+    mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    (req.file.originalname || "").toLowerCase().endsWith(".docx")
+  ) {
+    const mammoth = await import("mammoth");
+    const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+    content = result.value || "";
   } else if (mimeType.startsWith("image/")) {
     content = `[Image uploaded: ${req.file.originalname}]`;
   } else {
@@ -337,4 +344,50 @@ export const exportThread = async (req, res) => {
   ].join("\n\n");
 
   res.json({ success: true, markdown, title: thread.title, threadId: thread.threadId });
+};
+
+/**
+ * Guest streaming chat — no Mongo persistence.
+ * Client supplies recent history; replies are returned via SSE only.
+ */
+export const guestChatStream = async (req, res) => {
+  const { message, history = [], attachments = [] } = req.body;
+
+  if (!message || typeof message !== "string" || !message.trim()) {
+    return res.status(400).json({ error: "Message is required" });
+  }
+
+  const safeHistory = Array.isArray(history)
+    ? history
+        .filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
+        .slice(-20)
+        .map((item) => ({ role: item.role, content: item.content.slice(0, 12000) }))
+    : [];
+
+  const userContent = composeUserMessage(message.trim().slice(0, 12000), attachments);
+  const messages = [...safeHistory, { role: "user", content: userContent }];
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  let fullReply = "";
+
+  try {
+    for await (const chunk of streamGroqAPIResponse(messages, "", req.signal)) {
+      fullReply += chunk;
+      res.write(`event: chunk\ndata: ${JSON.stringify({ content: chunk })}\n\n`);
+    }
+
+    res.write(
+      `event: done\ndata: ${JSON.stringify({
+        reply: fullReply.trim(),
+        guest: true,
+      })}\n\n`
+    );
+  } catch (error) {
+    res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+  } finally {
+    res.end();
+  }
 };

@@ -15,4 +15,4 @@ export const sortThreads = (threads = []) =>
     return new Date(b.updatedAt) - new Date(a.updatedAt);
   });
 
-export const buildShareUrl = (threadId) => `${window.location.origin}/?thread=${threadId}`;
+export const buildShareUrl = (threadId) => `${window.location.origin}/app?thread=${threadId}`;

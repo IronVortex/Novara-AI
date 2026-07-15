@@ -1,13 +1,18 @@
 import { useContext, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MyContext } from "../../context/MyContext.jsx";
-import { registerUser } from "../../services/api.js";
+import { loginWithFirebase, registerUser } from "../../services/api.js";
+import {
+  firebaseGoogleLogin,
+  isFirebaseConfigured,
+  toFirebaseIdentity,
+} from "../../services/firebase.js";
 import { getPasswordStrength, validateEmail, validatePassword, getPasswordHints } from "../../utils/validatePassword.js";
 import "../../styles/auth.css";
 
 function Register() {
   const navigate = useNavigate();
-  const { setAuthUser, setToken, setToast, setAuthReady } = useContext(MyContext);
+  const { setAuthUser, setToken, setToast, setAuthReady, setSettings } = useContext(MyContext);
   const [form, setForm] = useState({ name: "", email: "", password: "", rememberMe: true });
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({ password: false });
@@ -17,11 +22,20 @@ function Register() {
   const passwordHints = useMemo(() => getPasswordHints(form.password), [form.password]);
   const passwordStrength = useMemo(() => getPasswordStrength(form.password), [form.password]);
 
-  const canSubmit =
-    form.name.trim() &&
-    !emailError &&
-    passwordErrors.length === 0 &&
-    !loading;
+  const canSubmit = form.name.trim() && !emailError && passwordErrors.length === 0 && !loading;
+
+  const persistSession = (response, rememberMe) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    localStorage.removeItem("novara-token");
+    sessionStorage.removeItem("novara-token");
+    storage.setItem("novara-token", response.token);
+    setToken(response.token);
+    setAuthUser(response.user);
+    if (response.user?.preferences) {
+      setSettings((prev) => ({ ...prev, ...response.user.preferences }));
+    }
+    setAuthReady(true);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -40,17 +54,26 @@ function Register() {
         email: form.email,
         password: form.password,
       });
-      const storage = form.rememberMe ? localStorage : sessionStorage;
-      localStorage.removeItem("novara-token");
-      sessionStorage.removeItem("novara-token");
-      storage.setItem("novara-token", response.token);
-      setToken(response.token);
-      setAuthUser(response.user);
-      setAuthReady(true);
+      persistSession(response, form.rememberMe);
       setToast({ type: "success", message: "Your Novara account is ready" });
-      navigate("/");
+      navigate("/app");
     } catch (error) {
       setToast({ type: "error", message: error.message || "Registration failed" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    try {
+      const user = await firebaseGoogleLogin();
+      const response = await loginWithFirebase(toFirebaseIdentity(user, "google"));
+      persistSession(response, true);
+      setToast({ type: "success", message: "Account created with Google" });
+      navigate("/app");
+    } catch (error) {
+      setToast({ type: "error", message: error.message || "Google sign-in failed" });
     } finally {
       setLoading(false);
     }
@@ -145,8 +168,17 @@ function Register() {
           </button>
         </form>
 
+        {isFirebaseConfigured ? (
+          <button type="button" className="auth-google" onClick={handleGoogle} disabled={loading}>
+            Continue with Google
+          </button>
+        ) : null}
+
         <p className="auth-switch">
           Already have an account? <Link to="/login">Sign in</Link>
+        </p>
+        <p className="auth-switch">
+          Or <Link to="/app">continue as guest</Link>
         </p>
       </div>
     </div>

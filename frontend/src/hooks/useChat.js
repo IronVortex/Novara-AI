@@ -5,9 +5,11 @@ import {
   editMessage,
   getThreads,
   regenerateMessage,
+  sendGuestMessageStream,
   sendMessageStream,
   uploadFile,
 } from "../services/api.js";
+import { getGuestThreads, saveGuestThread } from "../services/guestStorage.js";
 import { normalizeThreads } from "../utils/helpers.js";
 
 export function useChat() {
@@ -20,6 +22,7 @@ export function useChat() {
     setNewChat,
     setAllThreads,
     setToast,
+    isAuthenticated,
   } = useContext(MyContext);
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -29,12 +32,16 @@ export function useChat() {
 
   const refreshThreads = useCallback(async () => {
     try {
-      const threads = await getThreads();
-      setAllThreads(normalizeThreads(threads));
-    } catch (refreshError) {
-      console.warn("Failed to refresh thread list", refreshError);
+      if (isAuthenticated) {
+        const threads = await getThreads();
+        setAllThreads(normalizeThreads(threads));
+      } else {
+        setAllThreads(normalizeThreads(getGuestThreads()));
+      }
+    } catch {
+      // Keep UI stable when refresh fails.
     }
-  }, [setAllThreads]);
+  }, [isAuthenticated, setAllThreads]);
 
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
@@ -42,6 +49,17 @@ export function useChat() {
     setIsGenerating(false);
     setToast({ type: "success", message: "Generation stopped" });
   }, [setToast]);
+
+  const persistGuest = useCallback(
+    (messages) => {
+      saveGuestThread({
+        threadId: currThreadId,
+        title: messages.find((m) => m.role === "user")?.content?.slice(0, 60),
+        messages,
+      });
+    },
+    [currThreadId]
+  );
 
   const sendChat = useCallback(
     async (overrideMessage) => {
@@ -51,42 +69,79 @@ export function useChat() {
       setIsGenerating(true);
       setError("");
       setNewChat(false);
-      setPrevChats((prev) => [...prev, { role: "user", content: message }]);
+
+      const historyBefore = [...prevChats];
+      const withUser = [...historyBefore, { role: "user", content: message }];
+      setPrevChats([...withUser, { role: "assistant", content: "" }]);
       setPrompt("");
 
       const controller = new AbortController();
       abortRef.current = controller;
 
       let streamedContent = "";
-      setPrevChats((prev) => [...prev, { role: "assistant", content: "" }]);
 
       try {
-        await sendMessageStream(
-          { message, threadId: currThreadId, attachments },
-          {
-            signal: controller.signal,
-            onChunk: (chunk) => {
-              streamedContent += chunk;
-              setPrevChats((prev) => {
-                const next = [...prev];
-                const lastIndex = next.length - 1;
-                next[lastIndex] = { ...next[lastIndex], content: streamedContent };
-                return next;
-              });
+        if (isAuthenticated) {
+          await sendMessageStream(
+            { message, threadId: currThreadId, attachments },
+            {
+              signal: controller.signal,
+              onChunk: (chunk) => {
+                streamedContent += chunk;
+                setPrevChats((prev) => {
+                  const next = [...prev];
+                  const lastIndex = next.length - 1;
+                  next[lastIndex] = { ...next[lastIndex], content: streamedContent };
+                  return next;
+                });
+              },
+              onDone: async () => {
+                setAttachments([]);
+                await refreshThreads();
+              },
+              onError: (streamError) => {
+                throw streamError;
+              },
+            }
+          );
+        } else {
+          await sendGuestMessageStream(
+            {
+              message,
+              history: historyBefore.map((item) => ({ role: item.role, content: item.content })),
+              attachments,
             },
-            onDone: async () => {
-              setAttachments([]);
-              await refreshThreads();
-            },
-            onError: (streamError) => {
-              throw streamError;
-            },
-          }
-        );
+            {
+              signal: controller.signal,
+              onChunk: (chunk) => {
+                streamedContent += chunk;
+                setPrevChats((prev) => {
+                  const next = [...prev];
+                  const lastIndex = next.length - 1;
+                  next[lastIndex] = { ...next[lastIndex], content: streamedContent };
+                  return next;
+                });
+              },
+              onDone: () => {
+                const finalMessages = [
+                  ...withUser,
+                  { role: "assistant", content: streamedContent.trim() },
+                ];
+                setPrevChats(finalMessages);
+                persistGuest(finalMessages);
+                setAttachments([]);
+                refreshThreads();
+              },
+              onError: (streamError) => {
+                throw streamError;
+              },
+            }
+          );
+        }
       } catch (sendError) {
         if (sendError.name === "AbortError") return;
         setError(sendError.message || "Unable to send the message right now.");
-        setPrevChats((prev) => prev.slice(0, -2));
+        setPrevChats(historyBefore);
         setToast({ type: "error", message: sendError.message || "Request failed" });
       } finally {
         setIsGenerating(false);
@@ -96,7 +151,10 @@ export function useChat() {
     [
       attachments,
       currThreadId,
+      isAuthenticated,
       isGenerating,
+      persistGuest,
+      prevChats,
       prompt,
       refreshThreads,
       setNewChat,
@@ -118,6 +176,15 @@ export function useChat() {
 
   const regenerate = useCallback(
     async (messageIndex) => {
+      if (!isAuthenticated) {
+        const sliced = prevChats.slice(0, messageIndex);
+        const lastUser = [...sliced].reverse().find((m) => m.role === "user");
+        if (!lastUser) return;
+        setPrevChats(sliced.slice(0, sliced.map((m) => m.role).lastIndexOf("user") + 1));
+        await sendChat(lastUser.content);
+        return;
+      }
+
       setIsGenerating(true);
       setError("");
       try {
@@ -131,10 +198,14 @@ export function useChat() {
         setIsGenerating(false);
       }
     },
-    [currThreadId, setPrevChats, setToast]
+    [currThreadId, isAuthenticated, prevChats, sendChat, setPrevChats, setToast]
   );
 
   const continueResponse = useCallback(async () => {
+    if (!isAuthenticated) {
+      setToast({ type: "error", message: "Sign in to continue cloud conversations" });
+      return;
+    }
     setIsGenerating(true);
     try {
       const response = await continueMessage({ threadId: currThreadId });
@@ -144,10 +215,17 @@ export function useChat() {
     } finally {
       setIsGenerating(false);
     }
-  }, [currThreadId, setPrevChats, setToast]);
+  }, [currThreadId, isAuthenticated, setPrevChats, setToast]);
 
   const editUserPrompt = useCallback(
     async (messageIndex, content) => {
+      if (!isAuthenticated) {
+        const next = prevChats.slice(0, messageIndex);
+        setPrevChats(next);
+        await sendChat(content);
+        return;
+      }
+
       setIsGenerating(true);
       try {
         const response = await editMessage({ threadId: currThreadId, messageIndex, content });
@@ -158,7 +236,7 @@ export function useChat() {
         setIsGenerating(false);
       }
     },
-    [currThreadId, setPrevChats, setToast]
+    [currThreadId, isAuthenticated, prevChats, sendChat, setPrevChats, setToast]
   );
 
   const addFiles = useCallback(
