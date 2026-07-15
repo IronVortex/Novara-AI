@@ -1,13 +1,14 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MyContext } from "../../context/MyContext.jsx";
-import { loginUser, loginWithFirebase } from "../../services/api.js";
+import { loginUser, loginWithFirebase, migrateGuestThreads } from "../../services/api.js";
 import {
   firebaseGoogleLogin,
   isFirebaseConfigured,
   toFirebaseIdentity,
 } from "../../services/firebase.js";
 import { IconGoogle } from "../../components/common/Icons.jsx";
+import { getGuestThreads, clearGuestThreads } from "../../services/guestStorage.js";
 import "../../styles/auth.css";
 
 function Login() {
@@ -35,6 +36,17 @@ function Login() {
     try {
       const response = await loginUser({ email: form.email, password: form.password });
       persistSession(response, form.rememberMe);
+      
+      const guestThreads = getGuestThreads();
+      if (guestThreads.length > 0) {
+        try {
+          await migrateGuestThreads({ threads: guestThreads });
+          clearGuestThreads();
+        } catch (e) {
+          console.error("Failed to migrate guest threads", e);
+        }
+      }
+
       setToast({ type: "success", message: "Welcome back to Novara AI" });
       navigate("/app");
     } catch (error) {
@@ -50,6 +62,17 @@ function Login() {
       const user = await firebaseGoogleLogin();
       const response = await loginWithFirebase(toFirebaseIdentity(user, "google"));
       persistSession(response, true);
+      
+      const guestThreads = getGuestThreads();
+      if (guestThreads.length > 0) {
+        try {
+          await migrateGuestThreads({ threads: guestThreads });
+          clearGuestThreads();
+        } catch (e) {
+          console.error("Failed to migrate guest threads", e);
+        }
+      }
+
       setToast({ type: "success", message: "Signed in with Google" });
       navigate("/app");
     } catch (error) {

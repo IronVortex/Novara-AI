@@ -154,3 +154,40 @@ export const clearAllChats = async (req, res) => {
   await Thread.deleteMany({ userId: req.user._id });
   res.json({ success: true, message: "All chats cleared" });
 };
+
+export const migrateGuestThreads = async (req, res) => {
+  const { threads } = req.body;
+  if (!Array.isArray(threads) || threads.length === 0) {
+    return res.json({ success: true, migrated: 0 });
+  }
+
+  let migratedCount = 0;
+  for (const guestThread of threads) {
+    if (!guestThread.threadId) continue;
+    
+    // Prevent duplicate thread IDs
+    const existing = await Thread.findOne({ threadId: guestThread.threadId });
+    if (existing) continue; // Already migrated or collision
+
+    // Safely structure new thread
+    const newThread = new Thread({
+      threadId: guestThread.threadId,
+      userId: req.user._id,
+      title: guestThread.title || "Guest Chat",
+      messages: Array.isArray(guestThread.messages) ? guestThread.messages : [],
+      isPinned: !!guestThread.isPinned,
+      isFavorite: !!guestThread.isFavorite,
+      tags: Array.isArray(guestThread.tags) ? guestThread.tags : [],
+      summary: guestThread.summary || "",
+    });
+    
+    // Attempt to preserve timestamps if Mongoose schema allows (might be overridden by defaults)
+    if (guestThread.updatedAt) newThread.updatedAt = new Date(guestThread.updatedAt);
+    if (guestThread.createdAt) newThread.createdAt = new Date(guestThread.createdAt);
+
+    await newThread.save();
+    migratedCount++;
+  }
+
+  res.json({ success: true, migrated: migratedCount, message: `Migrated ${migratedCount} guest conversations` });
+};

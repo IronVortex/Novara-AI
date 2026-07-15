@@ -75,6 +75,8 @@ export const updatePreferences = async (payload) =>
   request("/auth/preferences", { method: "PATCH", body: JSON.stringify(payload) });
 export const deleteAccount = async () => request("/auth/account", { method: "DELETE" });
 export const clearAllChats = async () => request("/auth/chats", { method: "DELETE" });
+export const migrateGuestThreads = async (payload) =>
+  request("/auth/migrate-guest", { method: "POST", body: JSON.stringify(payload) });
 
 export const sendMessage = async (payload) =>
   request("/chats/chat", { method: "POST", body: JSON.stringify(payload) });

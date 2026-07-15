@@ -1,7 +1,7 @@
 import { useContext, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MyContext } from "../../context/MyContext.jsx";
-import { loginWithFirebase, registerUser } from "../../services/api.js";
+import { loginWithFirebase, registerUser, migrateGuestThreads } from "../../services/api.js";
 import {
   firebaseGoogleLogin,
   isFirebaseConfigured,
@@ -9,6 +9,7 @@ import {
 } from "../../services/firebase.js";
 import { getPasswordStrength, validateEmail, validatePassword, getPasswordHints } from "../../utils/validatePassword.js";
 import { IconGoogle } from "../../components/common/Icons.jsx";
+import { getGuestThreads, clearGuestThreads } from "../../services/guestStorage.js";
 import "../../styles/auth.css";
 
 function Register() {
@@ -49,6 +50,17 @@ function Register() {
     try {
       const response = await registerUser({ name: form.name, email: form.email, password: form.password });
       persistSession(response, form.rememberMe);
+      
+      const guestThreads = getGuestThreads();
+      if (guestThreads.length > 0) {
+        try {
+          await migrateGuestThreads({ threads: guestThreads });
+          clearGuestThreads();
+        } catch (e) {
+          console.error("Failed to migrate guest threads", e);
+        }
+      }
+
       setToast({ type: "success", message: "Your Novara account is ready" });
       navigate("/app");
     } catch (error) {
@@ -64,6 +76,17 @@ function Register() {
       const user = await firebaseGoogleLogin();
       const response = await loginWithFirebase(toFirebaseIdentity(user, "google"));
       persistSession(response, true);
+      
+      const guestThreads = getGuestThreads();
+      if (guestThreads.length > 0) {
+        try {
+          await migrateGuestThreads({ threads: guestThreads });
+          clearGuestThreads();
+        } catch (e) {
+          console.error("Failed to migrate guest threads", e);
+        }
+      }
+
       setToast({ type: "success", message: "Account created with Google" });
       navigate("/app");
     } catch (error) {

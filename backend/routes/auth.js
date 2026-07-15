@@ -10,6 +10,7 @@ import {
   registerUser,
   updatePreferences,
   updateProfile,
+  migrateGuestThreads,
 } from "../controllers/authController.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { protect } from "../middleware/authMiddleware.js";
@@ -28,5 +29,6 @@ router.patch("/profile", protect, asyncHandler(updateProfile));
 router.patch("/preferences", protect, asyncHandler(updatePreferences));
 router.delete("/account", protect, asyncHandler(deleteAccount));
 router.delete("/chats", protect, asyncHandler(clearAllChats));
+router.post("/migrate-guest", protect, asyncHandler(migrateGuestThreads));
 
 export default router;
