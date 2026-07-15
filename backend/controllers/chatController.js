@@ -42,6 +42,9 @@ const loadOrCreateThread = async ({ threadId, userId, message, attachments = [] 
     thread = new Thread({
       threadId,
       userId,
+      owner: userId,
+      createdBy: userId,
+      updatedBy: userId,
       title: message.slice(0, 60).trim() || "New Chat",
       messages: [{ role: "user", content: userContent, attachments }],
     });
@@ -57,6 +60,9 @@ export const createTestThread = async (req, res) => {
   const thread = await Thread.create({
     threadId: uuidv4(),
     userId: req.user._id,
+    owner: req.user._id,
+    createdBy: req.user._id,
+    updatedBy: req.user._id,
     title: "Testing New Thread",
     messages: [],
   });

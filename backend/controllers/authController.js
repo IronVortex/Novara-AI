@@ -173,6 +173,9 @@ export const migrateGuestThreads = async (req, res) => {
     const newThread = new Thread({
       threadId: guestThread.threadId,
       userId: req.user._id,
+      owner: req.user._id,
+      createdBy: req.user._id,
+      updatedBy: req.user._id,
       title: guestThread.title || "Guest Chat",
       messages: Array.isArray(guestThread.messages) ? guestThread.messages : [],
       isPinned: !!guestThread.isPinned,

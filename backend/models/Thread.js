@@ -54,6 +54,13 @@ const threadSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
+    provider: { type: String, trim: true },
+    model: { type: String, trim: true },
     title: {
       type: String,
       default: "New Chat",
@@ -66,7 +73,14 @@ const threadSchema = new mongoose.Schema(
     },
     isPinned: { type: Boolean, default: false, index: true },
     isFavorite: { type: Boolean, default: false, index: true },
+    isArchived: { type: Boolean, default: false },
+    folder: { type: String, trim: true, index: true },
     tags: { type: [String], default: [] },
+    lastMessage: { type: String, trim: true },
+    messageCount: { type: Number, default: 0 },
+    lastAccessed: { type: Date, default: Date.now },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     messages: {
       type: [messageSchema],
       default: [],
@@ -79,5 +93,7 @@ const threadSchema = new mongoose.Schema(
 
 threadSchema.index({ updatedAt: -1 });
 threadSchema.index({ userId: 1, isPinned: -1, updatedAt: -1 });
+threadSchema.index({ owner: 1, isPinned: -1, updatedAt: -1 });
+threadSchema.index({ tags: 1 });
 
 export default mongoose.model("Thread", threadSchema);
