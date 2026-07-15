@@ -1,6 +1,7 @@
 import { useCallback, useContext, useRef, useState } from "react";
 import { MyContext } from "../context/MyContext.jsx";
 import {
+  branchThread,
   continueMessage,
   editMessage,
   getThreads,
@@ -239,6 +240,24 @@ export function useChat() {
     [currThreadId, isAuthenticated, prevChats, sendChat, setPrevChats, setToast]
   );
 
+  const branchConversation = useCallback(
+    async (messageIndex) => {
+      if (!isAuthenticated) {
+        setToast({ type: 'error', message: 'Sign in to branch conversations' });
+        return;
+      }
+      try {
+        const response = await branchThread({ threadId: currThreadId, messageIndex });
+        setToast({ type: 'success', message: 'Conversation branched!' });
+        await refreshThreads();
+        return response.threadId;
+      } catch (err) {
+        setToast({ type: 'error', message: err.message });
+      }
+    },
+    [currThreadId, isAuthenticated, refreshThreads, setToast]
+  );
+
   const addFiles = useCallback(
     async (files) => {
       const uploaded = [];
@@ -265,6 +284,7 @@ export function useChat() {
     regenerate,
     continueResponse,
     editUserPrompt,
+    branchConversation,
     addFiles,
     setAttachments,
     refreshThreads,

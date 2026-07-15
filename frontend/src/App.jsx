@@ -8,6 +8,7 @@ import Loader from "./components/common/Loader.jsx";
 import { MyContext, MyContextProvider } from "./context/MyContext.jsx";
 import { getMe } from "./services/api.js";
 import { useTheme } from "./hooks/useTheme.js";
+import ErrorBoundary from "./components/common/ErrorBoundary.jsx";
 
 const LandingPage = lazy(() => import("./pages/Landing/index.jsx"));
 const AppShell = lazy(() => import("./components/layout/AppShell.jsx"));
@@ -15,6 +16,8 @@ const Login = lazy(() => import("./pages/Login/index.jsx"));
 const Register = lazy(() => import("./pages/Register/index.jsx"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword/index.jsx"));
 const SettingsPage = lazy(() => import("./pages/Settings/index.jsx"));
+const AdminPage = lazy(() => import("./pages/Admin/index.jsx"));
+const NotFound = lazy(() => import("./pages/NotFound/index.jsx"));
 
 function ThemeBootstrap({ children }) {
   useTheme();
@@ -67,12 +70,13 @@ function AppRoutes() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/app" element={<AppShell />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route element={<GuestRoute />}>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </>
@@ -84,7 +88,9 @@ function App() {
     <MyContextProvider>
       <BrowserRouter>
         <ThemeBootstrap>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </ThemeBootstrap>
       </BrowserRouter>
     </MyContextProvider>

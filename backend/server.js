@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
 import compression from "compression";
 import morgan from "morgan";
 
@@ -9,13 +10,16 @@ import { setupSwagger } from "./config/swagger.js";
 import connectDB from "./config/db.js";
 import chatRoutes from "./routes/chats.js";
 import authRoutes from "./routes/auth.js";
+import adminRoutes from "./routes/admin.js";
 import notFound from "./middleware/notFound.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
+import { auditLog } from "./middleware/auditLog.js";
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(mongoSanitize());
 app.use(compression());
 app.use(morgan(config.env === "production" ? "combined" : "dev"));
 app.use(
@@ -33,6 +37,8 @@ app.get("/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/chats", chatRoutes);
+app.use("/api/admin", adminRoutes);
+app.use(auditLog);
 setupSwagger(app);
 
 app.use(notFound);

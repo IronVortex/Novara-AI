@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import {
+  branchThread,
   chatWithThread,
   chatWithThreadStream,
   continueGeneration,
@@ -17,6 +18,7 @@ import {
   shareThread,
   getSharedThread,
 } from "../controllers/chatController.js";
+import { searchChats } from "../controllers/searchController.js";
 import { uploadDocument } from "../controllers/uploadController.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { optionalAuth, protect } from "../middleware/authMiddleware.js";
@@ -45,5 +47,7 @@ router.patch("/message", protect, asyncHandler(updateMessageMeta));
 router.post("/upload", optionalAuth, guestLimiter, upload.single("file"), asyncHandler(uploadDocument));
 router.post("/thread/:threadId/share", protect, validateThreadParam, asyncHandler(shareThread));
 router.get("/share/:threadId", validateThreadParam, asyncHandler(getSharedThread));
+router.post("/branch", protect, asyncHandler(branchThread));
+router.get("/search", protect, asyncHandler(searchChats));
 
 export default router;

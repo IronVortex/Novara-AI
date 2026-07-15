@@ -162,3 +162,14 @@ export const uploadFile = async (file) => {
   if (!response.ok) throw new Error(data.error || "Upload failed");
   return data;
 };
+
+export const branchThread = async (payload) =>
+  request('/chats/branch', { method: 'POST', body: JSON.stringify(payload) });
+
+export const searchThreads = async (query) =>
+  request(`/chats/search?q=${encodeURIComponent(query)}`);
+
+export const shareThread = async (threadId, payload) =>
+  request(`/chats/thread/${threadId}/share`, { method: 'POST', body: JSON.stringify(payload) });
+
+export const getAnalytics = async () => request('/auth/analytics');

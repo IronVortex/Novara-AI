@@ -5,6 +5,7 @@ import { useSpeech } from "../../hooks/useSpeech.js";
 import Button from "../common/Button.jsx";
 import PromptLibrary from "./PromptLibrary.jsx";
 import { IconAttach, IconBook, IconMic, IconMicOff, IconSend, IconStop } from "../common/Icons.jsx";
+import FileUploadPreview from './FileUploadPreview.jsx';
 
 function ChatInput({ onSend, onStop, loading, onFiles, attachments = [] }) {
   const { prompt, setPrompt, settings } = useContext(MyContext);
@@ -85,17 +86,23 @@ function ChatInput({ onSend, onStop, loading, onFiles, attachments = [] }) {
           />
         </div>
 
-        {attachments.length ? (
-          <div className="attachment-row">
-            {attachments.map((file) => (
-              <span key={`${file.name}-${file.mimeType}`} className="attachment-chip">
-                {file.name}
-              </span>
-            ))}
+        <FileUploadPreview
+          files={attachments}
+          onRemove={() => {
+            // handled by parent
+          }}
+        />
+
+        {listening ? (
+          <div className="speech-indicator">
+            <div className="waveform" aria-label="Recording in progress">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <span key={i} className="wave-bar" style={{ animationDelay: `${i * 0.08}s` }} />
+              ))}
+            </div>
+            {interim && <p className="live-transcript">{interim}</p>}
           </div>
         ) : null}
-
-        {listening && interim ? <p className="live-transcript">{interim}</p> : null}
 
         <div className="composer-main">
           <textarea

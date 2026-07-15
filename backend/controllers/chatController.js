@@ -490,6 +490,29 @@ export const getSharedThread = async (req, res) => {
   });
 };
 
+export const branchThread = async (req, res) => {
+  const { threadId, messageIndex } = req.body;
+  if (!threadId) return res.status(400).json({ error: 'threadId is required' });
+
+  const sourceThread = await findUserThread(threadId, req.user._id);
+  if (!sourceThread) return res.status(404).json({ error: 'Thread not found' });
+
+  const cutIndex = typeof messageIndex === 'number' ? messageIndex + 1 : sourceThread.messages.length;
+  const branchedMessages = sourceThread.messages.slice(0, cutIndex);
+
+  const newThread = new Thread({
+    threadId: uuidv4(),
+    userId: req.user._id,
+    title: `${sourceThread.title} (branch)`,
+    messages: branchedMessages,
+    summary: sourceThread.summary,
+  });
+  await newThread.save();
+  invalidateThreadCache(req.user._id);
+
+  res.json({ success: true, threadId: newThread.threadId, title: newThread.title });
+};
+
 /**
  * Guest streaming chat — no Mongo persistence.
  * Client supplies recent history; replies are returned via SSE only.
