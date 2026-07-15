@@ -14,8 +14,10 @@ import {
   regenerateResponse,
   updateMessageMeta,
   updateThread,
-  uploadDocument,
+  shareThread,
+  getSharedThread,
 } from "../controllers/chatController.js";
+import { uploadDocument } from "../controllers/uploadController.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { optionalAuth, protect } from "../middleware/authMiddleware.js";
 import { guestLimiter } from "../middleware/rateLimiter.js";
@@ -41,5 +43,7 @@ router.post("/continue", protect, asyncHandler(continueGeneration));
 router.post("/edit", protect, asyncHandler(editPrompt));
 router.patch("/message", protect, asyncHandler(updateMessageMeta));
 router.post("/upload", optionalAuth, guestLimiter, upload.single("file"), asyncHandler(uploadDocument));
+router.post("/thread/:threadId/share", protect, validateThreadParam, asyncHandler(shareThread));
+router.get("/share/:threadId", validateThreadParam, asyncHandler(getSharedThread));
 
 export default router;

@@ -17,6 +17,8 @@ import { protect } from "../middleware/authMiddleware.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
 import { validateLogin, validateRegister } from "../middleware/validateAuth.js";
 
+import { getMyAnalytics } from "../controllers/analyticsController.js";
+
 const router = express.Router();
 
 router.post("/register", authLimiter, validateRegister, asyncHandler(registerUser));
@@ -30,5 +32,6 @@ router.patch("/preferences", protect, asyncHandler(updatePreferences));
 router.delete("/account", protect, asyncHandler(deleteAccount));
 router.delete("/chats", protect, asyncHandler(clearAllChats));
 router.post("/migrate-guest", protect, asyncHandler(migrateGuestThreads));
+router.get("/analytics", protect, asyncHandler(getMyAnalytics));
 
 export default router;

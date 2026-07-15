@@ -5,6 +5,10 @@ import getGroqAPIResponse, {
   maybeUpdateSummary,
   streamGroqAPIResponse,
 } from "../utils/getGroqAPIResponse.js";
+import { generateTitleAsync } from "../services/ai/titleGenerator.js";
+import { extractMemoriesAsync } from "../services/ai/memoryExtractor.js";
+import { recordMetrics } from "../services/analyticsService.js";
+import { estimateTokens } from "../utils/conversationMemory.js";
 
 const threadCachePrefix = (userId) => `threads:${userId}:`;
 
@@ -31,28 +35,37 @@ const saveAssistantReply = async (thread, reply) => {
   await maybeUpdateSummary(thread);
   await thread.save();
   invalidateThreadCache(thread.userId);
+
+  if (thread.userId) {
+    const userMsgs = thread.messages.filter((m) => m.role === "user").map((m) => m.content);
+    extractMemoriesAsync(thread.userId, userMsgs, thread.threadId);
+  }
+
   return thread;
 };
 
 const loadOrCreateThread = async ({ threadId, userId, message, attachments = [] }) => {
   let thread = await findUserThread(threadId, userId);
   const userContent = composeUserMessage(message, attachments);
+  const isNewThread = !thread;
 
-  if (!thread) {
+  if (isNewThread) {
     thread = new Thread({
       threadId,
       userId,
       owner: userId,
       createdBy: userId,
       updatedBy: userId,
-      title: message.slice(0, 60).trim() || "New Chat",
+      title: "New Chat",
       messages: [{ role: "user", content: userContent, attachments }],
     });
   } else {
     thread.messages.push({ role: "user", content: userContent, attachments });
   }
 
-  thread.title = thread.title || message.slice(0, 60).trim() || "New Chat";
+  // Track whether this is a new thread so callers can trigger async title generation
+  thread._isNewThread = isNewThread;
+  thread._firstMessage = message;
   return thread;
 };
 
@@ -152,8 +165,26 @@ export const chatWithThread = async (req, res) => {
     attachments,
   });
 
-  const assistantReply = await getGroqAPIResponse(thread.messages, thread.summary);
+  const startTime = Date.now();
+  const assistantReply = await getGroqAPIResponse(thread.messages, thread.summary, req.user._id);
+  const latencyMs = Date.now() - startTime;
+
   await saveAssistantReply(thread, assistantReply);
+
+  // Fire-and-forget: generate AI title only for new threads
+  if (thread._isNewThread) {
+    generateTitleAsync(thread.threadId, thread._firstMessage);
+  }
+
+  // Fire-and-forget: record analytics
+  const promptText = thread.messages[thread.messages.length - 2]?.content || "";
+  recordMetrics({
+    userId: req.user._id,
+    threadId: thread.threadId,
+    promptTokens: estimateTokens(promptText),
+    completionTokens: estimateTokens(assistantReply),
+    latencyMs,
+  });
 
   res.json({
     success: true,
@@ -172,33 +203,76 @@ export const chatWithThreadStream = async (req, res) => {
     attachments,
   });
 
+  // Standard SSE headers
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // Disable Nginx buffering for SSE
+  res.flushHeaders();
 
+  const startTime = Date.now();
   let fullReply = "";
+  let saved = false;
+
+  // Persist whatever has been streamed so far on client disconnect
+  const handleDisconnect = async () => {
+    if (!saved && fullReply.trim()) {
+      saved = true;
+      try {
+        await saveAssistantReply(thread, fullReply.trim() + " \u2026"); // indicate truncation
+      } catch (_) {
+        // best-effort on disconnect
+      }
+    }
+  };
+  res.on("close", handleDisconnect);
 
   try {
-    for await (const chunk of streamGroqAPIResponse(thread.messages, thread.summary, req.signal)) {
+    for await (const chunk of streamGroqAPIResponse(thread.messages, thread.summary, req.signal, req.user._id)) {
+      if (res.writableEnded) break;
       fullReply += chunk;
       res.write(`event: chunk\ndata: ${JSON.stringify({ content: chunk })}\n\n`);
     }
 
-    if (fullReply.trim()) {
+    const latencyMs = Date.now() - startTime;
+
+    if (!saved && fullReply.trim()) {
+      saved = true;
       await saveAssistantReply(thread, fullReply.trim());
     }
 
-    res.write(
-      `event: done\ndata: ${JSON.stringify({
-        threadId: thread.threadId,
-        title: thread.title,
-        reply: fullReply.trim(),
-      })}\n\n`
-    );
+    // Fire-and-forget: generate AI title only for new threads
+    if (thread._isNewThread) {
+      generateTitleAsync(thread.threadId, thread._firstMessage);
+    }
+
+    // Fire-and-forget: record analytics
+    const promptText = thread.messages[thread.messages.length - 2]?.content || "";
+    recordMetrics({
+      userId: req.user._id,
+      threadId: thread.threadId,
+      promptTokens: estimateTokens(promptText),
+      completionTokens: estimateTokens(fullReply),
+      latencyMs,
+    });
+
+    if (!res.writableEnded) {
+      res.write(
+        `event: done\ndata: ${JSON.stringify({
+          threadId: thread.threadId,
+          title: thread.title,
+          reply: fullReply.trim(),
+        })}\n\n`
+      );
+    }
   } catch (error) {
-    res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+    // AbortError means client cancelled — no need to surface as an error event
+    if (error.name !== "AbortError" && !res.writableEnded) {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+    }
   } finally {
-    res.end();
+    res.removeListener("close", handleDisconnect);
+    if (!res.writableEnded) res.end();
   }
 };
 
@@ -217,11 +291,17 @@ export const regenerateResponse = async (req, res) => {
     return res.status(400).json({ error: "No assistant message to regenerate" });
   }
 
+  // Trim to just before the last assistant reply
   thread.messages = thread.messages.slice(0, targetIndex);
-  const assistantReply = await getGroqAPIResponse(thread.messages, thread.summary);
+  const assistantReply = await getGroqAPIResponse(thread.messages, thread.summary, req.user._id);
   await saveAssistantReply(thread, assistantReply);
 
-  res.json({ success: true, reply: assistantReply, messages: thread.messages });
+  res.json({
+    success: true,
+    reply: assistantReply,
+    messages: thread.messages,
+    threadId: thread.threadId,
+  });
 };
 
 export const continueGeneration = async (req, res) => {
@@ -229,6 +309,11 @@ export const continueGeneration = async (req, res) => {
   const thread = await findUserThread(threadId, req.user._id);
 
   if (!thread) return res.status(404).json({ error: "Thread not found" });
+
+  const lastMessage = thread.messages[thread.messages.length - 1];
+  if (lastMessage?.role !== "assistant") {
+    return res.status(400).json({ error: "Last message must be from assistant to continue" });
+  }
 
   const continuationPrompt = [
     ...thread.messages,
@@ -238,19 +323,20 @@ export const continueGeneration = async (req, res) => {
     },
   ];
 
-  const assistantReply = await getGroqAPIResponse(continuationPrompt, thread.summary);
-  const lastMessage = thread.messages[thread.messages.length - 1];
+  const assistantReply = await getGroqAPIResponse(continuationPrompt, thread.summary, req.user._id);
 
-  if (lastMessage?.role === "assistant") {
-    lastMessage.content = `${lastMessage.content}\n${assistantReply}`.trim();
-  } else {
-    thread.messages.push({ role: "assistant", content: assistantReply });
-  }
+  // Append continuation to the last assistant message seamlessly
+  lastMessage.content = `${lastMessage.content}\n${assistantReply}`.trim();
 
   await thread.save();
   invalidateThreadCache(req.user._id);
 
-  res.json({ success: true, reply: assistantReply, messages: thread.messages });
+  res.json({
+    success: true,
+    reply: assistantReply,
+    messages: thread.messages,
+    threadId: thread.threadId,
+  });
 };
 
 export const editPrompt = async (req, res) => {
@@ -270,7 +356,7 @@ export const editPrompt = async (req, res) => {
   target.content = content.trim();
   thread.messages = thread.messages.slice(0, messageIndex + 1);
 
-  const assistantReply = await getGroqAPIResponse(thread.messages, thread.summary);
+  const assistantReply = await getGroqAPIResponse(thread.messages, thread.summary, req.user._id);
   await saveAssistantReply(thread, assistantReply);
 
   res.json({ success: true, reply: assistantReply, messages: thread.messages });
@@ -303,53 +389,105 @@ export const updateMessageMeta = async (req, res) => {
   res.json({ success: true, message });
 };
 
-export const uploadDocument = async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-
-  let content = "";
-  const mimeType = req.file.mimetype || "application/octet-stream";
-
-  if (mimeType === "application/pdf") {
-    const { default: pdfParse } = await import("pdf-parse");
-    const parsed = await pdfParse(req.file.buffer);
-    content = parsed.text || "";
-  } else if (
-    mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-    (req.file.originalname || "").toLowerCase().endsWith(".docx")
-  ) {
-    const mammoth = await import("mammoth");
-    const result = await mammoth.extractRawText({ buffer: req.file.buffer });
-    content = result.value || "";
-  } else if (mimeType.startsWith("image/")) {
-    content = `[Image uploaded: ${req.file.originalname}]`;
-  } else {
-    content = req.file.buffer.toString("utf8");
-  }
-
-  res.json({
-    success: true,
-    attachment: {
-      name: req.file.originalname,
-      mimeType,
-      content: content.slice(0, 12000),
-      type: mimeType.startsWith("image/") ? "image" : mimeType === "application/pdf" ? "pdf" : "text",
-    },
-  });
-};
 
 export const exportThread = async (req, res) => {
   const thread = await findUserThread(req.params.threadId, req.user._id).lean();
   if (!thread) return res.status(404).json({ error: "Thread not found" });
 
+  const format = req.query.format || "markdown";
+
+  if (format === "json") {
+    return res.json({ success: true, format, data: thread });
+  }
+
+  if (format === "html") {
+    const messageHtml = thread.messages
+      .map(
+        (m) => `
+        <div style="margin-bottom: 20px; padding: 15px; border-radius: 8px; background: ${
+          m.role === "user" ? "#2f3136" : "#40444b"
+        }; color: #ffffff;">
+          <strong>${m.role === "user" ? "You" : "Novara"}</strong>
+          <div style="margin-top: 8px; white-space: pre-wrap;">${m.content}</div>
+        </div>`
+      )
+      .join("");
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${thread.title}</title>
+          <meta charset="utf-8">
+        </head>
+        <body style="font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #36393f; color: #dcddde;">
+          <h1>${thread.title}</h1>
+          <hr style="border: 0; border-top: 1px solid #4f545c; margin-bottom: 30px;">
+          ${messageHtml}
+        </body>
+      </html>
+    `;
+    res.setHeader("Content-Type", "text/html");
+    return res.send(html);
+  }
+
+  // Default: Markdown
   const markdown = [
     `# ${thread.title}`,
     "",
     ...thread.messages.map((message) => `## ${message.role === "user" ? "You" : "Novara"}\n\n${message.content}`),
   ].join("\n\n");
 
-  res.json({ success: true, markdown, title: thread.title, threadId: thread.threadId });
+  res.json({ success: true, format, markdown, title: thread.title, threadId: thread.threadId });
+};
+
+export const shareThread = async (req, res) => {
+  const { threadId } = req.params;
+  const { isShared, expiresHours } = req.body;
+
+  const thread = await findUserThread(threadId, req.user._id);
+  if (!thread) return res.status(404).json({ error: "Thread not found" });
+
+  thread.isShared = typeof isShared === "boolean" ? isShared : true;
+  if (expiresHours && typeof expiresHours === "number") {
+    thread.shareExpiresAt = new Date(Date.now() + expiresHours * 60 * 60 * 1000);
+  } else {
+    thread.shareExpiresAt = null; // indefinite
+  }
+
+  await thread.save();
+  invalidateThreadCache(req.user._id);
+
+  res.json({
+    success: true,
+    data: {
+      threadId: thread.threadId,
+      isShared: thread.isShared,
+      shareExpiresAt: thread.shareExpiresAt,
+    },
+  });
+};
+
+export const getSharedThread = async (req, res) => {
+  const { threadId } = req.params;
+  const thread = await Thread.findOne({ threadId }).lean();
+
+  if (!thread || !thread.isShared) {
+    return res.status(404).json({ error: "Shared thread not found or link has expired" });
+  }
+
+  if (thread.shareExpiresAt && new Date(thread.shareExpiresAt) < new Date()) {
+    return res.status(410).json({ error: "This share link has expired" });
+  }
+
+  res.json({
+    success: true,
+    data: {
+      title: thread.title,
+      messages: thread.messages || [],
+      updatedAt: thread.updatedAt,
+    },
+  });
 };
 
 /**
@@ -376,24 +514,31 @@ export const guestChatStream = async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
 
   let fullReply = "";
 
   try {
     for await (const chunk of streamGroqAPIResponse(messages, "", req.signal)) {
+      if (res.writableEnded) break;
       fullReply += chunk;
       res.write(`event: chunk\ndata: ${JSON.stringify({ content: chunk })}\n\n`);
     }
 
-    res.write(
-      `event: done\ndata: ${JSON.stringify({
-        reply: fullReply.trim(),
-        guest: true,
-      })}\n\n`
-    );
+    if (!res.writableEnded) {
+      res.write(
+        `event: done\ndata: ${JSON.stringify({
+          reply: fullReply.trim(),
+          guest: true,
+        })}\n\n`
+      );
+    }
   } catch (error) {
-    res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+    if (error.name !== "AbortError" && !res.writableEnded) {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
+    }
   } finally {
-    res.end();
+    if (!res.writableEnded) res.end();
   }
 };

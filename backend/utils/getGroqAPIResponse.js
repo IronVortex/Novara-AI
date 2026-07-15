@@ -66,8 +66,11 @@ export const maybeUpdateSummary = async (thread) => {
   return summary;
 };
 
-export const getGroqAPIResponse = async (messages = [], summary = "") => {
-  const prompt = buildContextMessages(messages, summary);
+import { buildMemoryContext } from "../services/ai/memoryExtractor.js";
+
+export const getGroqAPIResponse = async (messages = [], summary = "", userId = null) => {
+  const memoryContext = userId ? await buildMemoryContext(userId) : "";
+  const prompt = buildContextMessages(messages, summary, memoryContext);
 
   const completion = await withRetry(() =>
     groq.chat.completions.create({
@@ -81,8 +84,9 @@ export const getGroqAPIResponse = async (messages = [], summary = "") => {
   return reply;
 };
 
-export async function* streamGroqAPIResponse(messages = [], summary = "", signal) {
-  const prompt = buildContextMessages(messages, summary);
+export async function* streamGroqAPIResponse(messages = [], summary = "", signal = null, userId = null) {
+  const memoryContext = userId ? await buildMemoryContext(userId) : "";
+  const prompt = buildContextMessages(messages, summary, memoryContext);
 
   const stream = await withRetry(() =>
     groq.chat.completions.create({

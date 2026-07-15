@@ -81,6 +81,8 @@ const threadSchema = new mongoose.Schema(
     lastAccessed: { type: Date, default: Date.now },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    isShared: { type: Boolean, default: false },
+    shareExpiresAt: { type: Date },
     messages: {
       type: [messageSchema],
       default: [],

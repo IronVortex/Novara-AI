@@ -8,7 +8,15 @@ export const estimateTokens = (text = "") => Math.ceil(String(text).length / 4);
 export const estimateMessagesTokens = (messages = []) =>
   messages.reduce((total, message) => total + estimateTokens(message.content) + 4, 0);
 
-export const buildContextMessages = (messages = [], summary = "") => {
+/**
+ * Builds the final message array for the AI, combining system prompt, user memory context,
+ * a rolling conversation summary, and the most recent messages within the token budget.
+ *
+ * @param {Array} messages - Full conversation messages
+ * @param {string} summary - Summarized older conversation
+ * @param {string} [memoryContext] - User memory block from memoryExtractor.buildMemoryContext()
+ */
+export const buildContextMessages = (messages = [], summary = "", memoryContext = "") => {
   const recent = messages.slice(-config.ai.maxContextMessages);
   let tokenBudget = config.ai.maxTokenBudget;
   const selected = [];
@@ -22,6 +30,11 @@ export const buildContextMessages = (messages = [], summary = "") => {
   }
 
   const prompt = [{ role: "system", content: SYSTEM_PROMPT }];
+
+  // Inject known user facts into the system context
+  if (memoryContext?.trim()) {
+    prompt.push({ role: "system", content: memoryContext.trim() });
+  }
 
   if (summary?.trim()) {
     prompt.push({
