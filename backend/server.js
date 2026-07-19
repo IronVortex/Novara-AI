@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import mongoSanitize from "express-mongo-sanitize";
 import compression from "compression";
 import morgan from "morgan";
 
@@ -18,8 +17,27 @@ import { auditLog } from "./middleware/auditLog.js";
 
 const app = express();
 
+const sanitizeObj = (obj) => {
+  if (obj && typeof obj === 'object') {
+    for (const key in obj) {
+      if (key.startsWith('$') || key.includes('.')) {
+        delete obj[key];
+      } else if (typeof obj[key] === 'object') {
+        sanitizeObj(obj[key]);
+      }
+    }
+  }
+};
+
+const customMongoSanitize = (req, res, next) => {
+  if (req.body) sanitizeObj(req.body);
+  if (req.query) sanitizeObj(req.query);
+  if (req.params) sanitizeObj(req.params);
+  next();
+};
+
 app.use(helmet({ crossOriginResourcePolicy: false }));
-app.use(mongoSanitize());
+app.use(customMongoSanitize);
 app.use(compression());
 app.use(morgan(config.env === "production" ? "combined" : "dev"));
 app.use(
