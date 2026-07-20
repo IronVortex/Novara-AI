@@ -4,16 +4,18 @@
   <img src="./frontend/public/logo.png" width="120" alt="Novara AI Logo">
 </p>
 
+<h1 align="center">Novara AI</h1>
+
 <p align="center">
-An intelligent AI workspace built with React, Node.js, Express, MongoDB, and Groq AI.
+A modern AI workspace for intelligent conversations, document understanding, and productivity.
 </p>
 
 <p align="center">
 
-![React](https://img.shields.io/badge/React-19-blue?logo=react)
-![Node.js](https://img.shields.io/badge/Node.js-22-green?logo=node.js)
-![Express](https://img.shields.io/badge/Express-5-black?logo=express)
-![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?logo=mongodb)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=node.js&logoColor=white)
+![Express](https://img.shields.io/badge/Express-5-000000?logo=express)
+![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 </p>
@@ -22,64 +24,63 @@ An intelligent AI workspace built with React, Node.js, Express, MongoDB, and Gro
 
 ## Overview
 
-Novara AI is a modern AI-powered conversational platform designed to deliver a seamless chat experience with a polished, production-ready interface.
+Novara AI is a production-oriented full-stack AI application designed to provide a seamless conversational experience while integrating document intelligence, speech capabilities, and user personalization into a single workspace.
 
-Built with a scalable full-stack architecture, Novara AI combines real-time AI conversations, document intelligence, speech capabilities, conversation management, and user personalization into a single workspace.
-
-The project follows production-oriented software engineering practices including modular architecture, reusable components, RESTful APIs, secure authentication, CI/CD, and responsive UI design.
+The project follows modern software engineering practices with a modular architecture, reusable components, secure authentication, RESTful APIs, and a responsive user interface suitable for real-world deployment.
 
 ---
 
-## Demo
+## Why Novara AI?
 
-> Live Demo: **Coming Soon**
+Novara AI was built with a focus on maintainability, scalability, and developer experience.
 
-> API Documentation: `http://localhost:5000/api/docs`
-
----
-
-# Features
-
-### AI Chat
-
-- Real-time AI conversations
-- Streaming responses
-- Markdown rendering
-- Code syntax highlighting
-- Mermaid diagrams
-- LaTeX support
-- Multiple AI model support
-- Regenerate responses
-- Branch conversations
+- Modular full-stack architecture
+- Clean separation between frontend and backend
+- Secure authentication and protected APIs
+- AI-powered conversations with streaming support
+- Document analysis with OCR capabilities
+- Responsive interface across devices
+- Production-ready deployment workflow
 
 ---
+
+## Features
+
+### AI Workspace
+
+| Feature | Description |
+|----------|-------------|
+| AI Chat | Natural language conversations |
+| Streaming Responses | Live AI output |
+| Markdown Rendering | Rich formatted responses |
+| Code Highlighting | Syntax highlighting |
+| Mermaid Support | Diagram rendering |
+| LaTeX Support | Mathematical expressions |
+| Multiple AI Models | Switch between supported models |
+| Conversation Branching | Explore alternate responses |
+| Response Regeneration | Retry AI responses |
 
 ### Conversation Management
 
-- Unlimited chat threads
-- Automatic AI-generated titles
+- Unlimited conversations
+- AI-generated titles
 - Rename conversations
-- Delete conversations
-- Archive & Pin chats
+- Archive and pin chats
 - Global search
 - Export conversations
 - Share conversations
 
----
-
 ### Authentication
 
 - Guest Mode
-- Email & Password Authentication
+- Email & Password
 - Google Sign-In
 - JWT Authentication
-- Guest chat migration
-
----
+- Guest conversation migration
 
 ### Document Intelligence
 
-Supports
+Supported formats:
 
 - PDF
 - DOCX
@@ -89,133 +90,123 @@ Supports
 - JSON
 - Images
 
-Capabilities
+Capabilities:
 
 - OCR
-- Image Understanding
-- Document Summarization
-- AI-powered Extraction
-
----
+- Document summarization
+- Information extraction
+- Image understanding
 
 ### Speech
 
 - Speech-to-Text
 - Text-to-Speech
-- Voice Recording
-- Live Recording Indicators
-
----
+- Voice recording
 
 ### Personalization
 
-- Multiple Themes
-- AI Model Selection
-- Profile Settings
-- Notifications
-- User Preferences
-
----
+- Theme selection
+- AI model selection
+- Profile management
+- Notification preferences
 
 ### Security
 
 - JWT Authentication
 - Helmet
 - Rate Limiting
-- Mongo Sanitization
-- CORS Protection
+- MongoDB Sanitization
 - Request Validation
-- Audit Logging
+- Secure CORS Configuration
 
 ---
 
-# Tech Stack
+## Technology Stack
 
-| Frontend | Backend | Database | AI | DevOps |
-|-----------|----------|-----------|------|---------|
-| React | Node.js | MongoDB Atlas | Groq AI | GitHub Actions |
-| Vite | Express | Mongoose | Llama Models | Docker |
-| React Router | JWT | | Vision AI | Vercel |
-| Context API | Multer | | | Render |
-
----
-
-# Architecture
-
-```
-               React + Vite
-                     │
-                     │
-        ┌────────────▼────────────┐
-        │      Express API         │
-        └────────────┬────────────┘
-                     │
-      ┌──────────────┼──────────────┐
-      │              │              │
-      ▼              ▼              ▼
-  MongoDB        Groq AI       Firebase
-   Atlas         Services      Authentication
-```
+| Layer | Technologies |
+|-------|--------------|
+| Frontend | React 19, Vite, React Router, Context API |
+| Backend | Node.js, Express 5 |
+| Database | MongoDB Atlas, Mongoose |
+| Authentication | JWT, Firebase Authentication |
+| AI | Groq API, Llama Models |
+| Deployment | Vercel, Render |
+| DevOps | Docker, GitHub Actions |
 
 ---
 
-# Project Structure
+## Architecture
 
+```mermaid
+flowchart TD
+
+A[React + Vite] --> B[Express API]
+
+B --> C[Authentication]
+B --> D[AI Service]
+B --> E[Document Service]
+B --> F[Conversation Service]
+
+C --> G[(MongoDB Atlas)]
+D --> H[Groq API]
+E --> I[OCR Engine]
+F --> G
 ```
+
+---
+
+## Project Structure
+
+```text
 Novara-AI
-
-frontend/
 │
-├── src/
-│   ├── assets/
-│   ├── components/
-│   ├── context/
-│   ├── hooks/
-│   ├── pages/
-│   ├── services/
-│   ├── styles/
-│   └── utils/
+├── frontend
+│   ├── public
+│   └── src
+│       ├── assets
+│       ├── components
+│       ├── context
+│       ├── hooks
+│       ├── pages
+│       ├── services
+│       ├── styles
+│       └── utils
 │
-backend/
+├── backend
+│   ├── config
+│   ├── controllers
+│   ├── middleware
+│   ├── models
+│   ├── routes
+│   ├── services
+│   ├── utils
+│   └── tests
 │
-├── config/
-├── controllers/
-├── middleware/
-├── models/
-├── routes/
-├── services/
-├── utils/
-└── tests/
-
-.github/
-
-README.md
+├── .github
+└── README.md
 ```
 
 ---
 
-# Getting Started
+## Getting Started
 
-## Clone Repository
+### Clone
 
 ```bash
-git clone https://github.com/<your-username>/Novara-AI.git
-
+git clone https://github.com/IronVortex/Novara-AI.git
 cd Novara-AI
 ```
 
----
+### Install
 
-## Install Dependencies
-
-### Backend
+Backend
 
 ```bash
 cd backend
 npm install
 ```
 
-### Frontend
+Frontend
 
 ```bash
 cd frontend
@@ -224,9 +215,7 @@ npm install
 
 ---
 
-# Environment Variables
-
-Backend
+## Environment Variables
 
 ```env
 PORT=5000
@@ -244,13 +233,12 @@ CLIENT_URL=http://localhost:5173
 
 ---
 
-# Running Locally
+## Run Locally
 
 Backend
 
 ```bash
 cd backend
-
 npm run dev
 ```
 
@@ -258,13 +246,12 @@ Frontend
 
 ```bash
 cd frontend
-
 npm run dev
 ```
 
 ---
 
-# Build
+## Build
 
 Frontend
 
@@ -280,62 +267,62 @@ npm test
 
 ---
 
-# Screenshots
+## Screenshots
 
-| Landing | Chat |
-|---------|------|
-| *(Add Screenshot)* | *(Add Screenshot)* |
+Replace the placeholders below after deployment.
 
-| Settings | Admin Dashboard |
-|----------|-----------------|
-| *(Add Screenshot)* | *(Add Screenshot)* |
+| Landing Page | Chat Workspace |
+|--------------|----------------|
+| Screenshot | Screenshot |
+
+| Documents | Settings |
+|-----------|----------|
+| Screenshot | Screenshot |
 
 ---
 
-# Roadmap
+## Roadmap
 
-- ✅ AI Chat
-- ✅ Guest Mode
-- ✅ Authentication
-- ✅ Speech Recognition
-- ✅ Image Understanding
-- ✅ Document Upload
-- ✅ Global Search
-- ✅ Conversation Sharing
-- ✅ Analytics Dashboard
-- ✅ Admin Dashboard
-- ✅ Production Security
-- ✅ CI/CD
+Completed
 
-Future
+- AI Chat
+- Authentication
+- Guest Mode
+- Document Upload
+- OCR
+- Speech Recognition
+- Conversation Search
+- Production Security
 
-- Mobile Application
+Planned
+
 - AI Agents
-- Plugin Marketplace
 - Workspace Collaboration
+- Plugin System
+- Mobile Application
 - RAG Knowledge Base
 
 ---
 
-# Contributing
+## Contributing
 
 Contributions are welcome.
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push your branch
-5. Open a Pull Request
+1. Fork the repository.
+2. Create a feature branch.
+3. Commit your changes.
+4. Push the branch.
+5. Open a Pull Request.
 
 ---
 
-# License
+## License
 
-Licensed under the MIT License.
+This project is licensed under the MIT License.
 
 ---
 
-# Author
+## Author
 
 **Afshan**
 
@@ -345,8 +332,8 @@ GitHub: https://github.com/IronVortex
 
 <p align="center">
 
-Built with React • Express • MongoDB • Groq AI
+Built with React, Express, MongoDB and Groq AI.
 
-**Novara AI — Intelligent conversations, beautifully designed.**
+<strong>Novara AI</strong> — Intelligent conversations with a clean, modern workspace.
 
 </p>
