@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="./frontend/public/logo.png" width="110" alt="Novara AI Logo">
-</p>
-
 <h1 align="center">Novara AI</h1>
 
 <p align="center">

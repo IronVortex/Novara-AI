@@ -69,21 +69,20 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 14px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  color: white;
-  border: 0;
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: all 180ms ease;
+  cursor: pointer;
 }
 
 .sidebar-create-btn:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  background: var(--color-border);
+  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 /* ─── Search Box ─────────────────────────────────────────────────────────── */
@@ -168,17 +167,17 @@
 }
 
 .thread-item:hover {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: rgba(99, 102, 241, 0.15);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  border-color: var(--color-border);
 }
 
 .thread-item.active {
-  background: rgba(99, 102, 241, 0.14);
-  border-color: rgba(99, 102, 241, 0.3);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-text) 15%, transparent);
 }
 
 .thread-item.pinned {
-  border-left: 2px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
+  border-left: 2px solid var(--color-primary);
 }
 
 /* Thread select button */

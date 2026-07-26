@@ -10,22 +10,22 @@
 :root,
 [data-theme="dark"] {
   /* HSL Color Foundations */
-  --bg-h: 240; --bg-s: 10%; --bg-l: 3.9%;
-  --card-h: 240; --card-s: 10%; --card-l: 10%;
-  --primary-h: 250; --primary-s: 89%; --primary-l: 65%;
-  --secondary-h: 263; --secondary-s: 90%; --secondary-l: 65%;
-  --text-h: 0; --text-s: 0%; --text-l: 98%;
-  --muted-h: 240; --muted-s: 5%; --muted-l: 64.9%;
+  --bg-h: 240; --bg-s: 14%; --bg-l: 4.5%;
+  --card-h: 240; --card-s: 10%; --card-l: 8.5%;
+  --primary-h: 255; --primary-s: 70%; --primary-l: 58%;
+  --secondary-h: 260; --secondary-s: 65%; --secondary-l: 62%;
+  --text-h: 210; --text-s: 15%; --text-l: 96%;
+  --muted-h: 215; --muted-s: 12%; --muted-l: 58%;
 
   /* Color Definitions derived dynamically */
   --color-primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
   --color-secondary: hsl(var(--secondary-h), var(--secondary-s), var(--secondary-l));
   --color-bg: hsl(var(--bg-h), var(--bg-s), var(--bg-l));
   --color-card: hsl(var(--card-h), var(--card-s), var(--card-l));
-  --color-surface: hsla(var(--card-h), var(--card-s), var(--card-l), 0.72);
+  --color-surface: hsla(var(--card-h), var(--card-s), var(--card-l), 0.55);
   --color-text: hsl(var(--text-h), var(--text-s), var(--text-l));
   --color-muted: hsl(var(--muted-h), var(--muted-s), var(--muted-l));
-  --color-border: hsla(var(--text-h), var(--text-s), var(--text-l), 0.08);
+  --color-border: hsla(var(--text-h), var(--text-s), var(--text-l), 0.05);
 
   /* Alerts and Semantics */
   --color-success: hsl(142, 71%, 45%);
