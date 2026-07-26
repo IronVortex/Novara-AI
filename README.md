@@ -217,7 +217,7 @@ Distributed under the MIT License. See `LICENSE` for details.
 
 ## Author
 
-**Afshan**
+**A J Afshan**
 GitHub: [@IronVortex](https://github.com/IronVortex)
 
 ---

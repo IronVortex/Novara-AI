@@ -1,15 +1,5 @@
 import { analyzeImage } from "../services/ai/visionService.js";
-
-/**
- * Handles file uploads — text documents and images.
- *
- * For images: runs vision AI to extract description, OCR, objects, and summary.
- * The resulting `content` field is plain text that any standard chat model can reason about.
- *
- * For documents: extracts raw text from PDF, DOCX, or plain text files.
- *
- * Route: POST /api/chats/upload
- */
+import pdfParse from "pdf-parse";
 export const uploadDocument = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "No file uploaded" });

@@ -16,6 +16,8 @@ import { apiLimiter } from "./middleware/rateLimiter.js";
 import { auditLog } from "./middleware/auditLog.js";
 
 const app = express();
+app.set("trust proxy", 1);
+app.use(helmet({ crossOriginResourcePolicy: false }));
 
 const sanitizeObj = (obj) => {
   if (obj && typeof obj === 'object') {
