@@ -13,26 +13,14 @@
   justify-content: center;
   align-items: flex-start;
   padding: clamp(32px, 6vw, 80px);
-  background:
-    radial-gradient(ellipse 80% 60% at 10% 90%, color-mix(in srgb, var(--color-secondary) 30%, transparent), transparent),
-    radial-gradient(ellipse 60% 50% at 90% 10%, color-mix(in srgb, var(--color-primary) 25%, transparent), transparent),
-    var(--color-card);
+  background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   position: relative;
   overflow: hidden;
 }
 
 .auth-hero-glow {
-  position: absolute;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--color-primary) 28%, transparent), transparent 70%);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  filter: blur(40px);
-  pointer-events: none;
+  display: none;
 }
 
 .auth-hero-brand {
@@ -52,9 +40,10 @@
   border-radius: 14px;
   font-weight: 800;
   font-size: 1.2rem;
-  color: white;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-soft);
 }
 
 .auth-hero-brand span {
@@ -69,10 +58,7 @@
   letter-spacing: -0.04em;
   line-height: 1.1;
   margin: 0 0 16px;
-  background: linear-gradient(140deg, var(--color-text), var(--color-primary));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--color-text);
 }
 
 .auth-hero-tagline {
@@ -103,7 +89,7 @@
   border-radius: 50%;
   background: var(--color-primary);
   flex-shrink: 0;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 60%, transparent);
+  box-shadow: none;
 }
 
 /* ─── Right panel (form card) ─────────────────────────────────────────────── */
@@ -130,9 +116,10 @@
   border-radius: 14px;
   font-weight: 800;
   font-size: 1.2rem;
-  color: white;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-soft);
 }
 
 .auth-brand h1 {
@@ -187,18 +174,18 @@
   border: 0;
   padding: 12px 16px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  background: var(--color-primary);
   color: white;
   font-weight: 700;
   font-size: 0.95rem;
   transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  box-shadow: var(--shadow-soft);
 }
 
 .auth-btn:hover:not(:disabled) {
   opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  box-shadow: var(--shadow-soft);
 }
 
 .auth-btn:disabled {
@@ -323,7 +310,7 @@
 .password-strength span.active.level-1 { background: var(--color-danger); }
 .password-strength span.active.level-2 { background: var(--color-warning); }
 .password-strength span.active.level-3 { background: var(--color-success); }
-.password-strength span.active.level-4 { background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); }
+.password-strength span.active.level-4 { background: var(--color-primary); }
 
 .password-label {
   color: var(--color-muted);
@@ -361,15 +348,15 @@
 }
 
 .toast--success {
-  background: linear-gradient(135deg, #16a34a, #15803d);
+  background: var(--color-success);
 }
 
 .toast--error {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: var(--color-danger);
 }
 
 .toast--info {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  background: var(--color-primary);
 }
 
 .toast__icon { flex-shrink: 0; }

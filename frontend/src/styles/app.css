@@ -30,10 +30,7 @@ body,
 }
 
 body {
-  background:
-    radial-gradient(ellipse 70% 45% at 15% -10%, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent),
-    radial-gradient(ellipse 50% 35% at 95% 5%, color-mix(in srgb, var(--color-secondary) 12%, transparent), transparent),
-    var(--color-bg);
+  background-color: var(--color-bg);
   color: var(--color-text);
   overflow-x: hidden;
   line-height: 1.6;
@@ -81,8 +78,8 @@ a:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-muted) 25%, transparent);
-  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-muted) 30%, transparent);
+  border-radius: var(--radius-lg);
   border: 1px solid transparent;
   background-clip: padding-box;
 }
@@ -166,8 +163,7 @@ select {
   border-radius: var(--radius-md);
   color: var(--color-text);
   outline: none;
-  backdrop-filter: var(--glass-blur);
-  transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
 }
 
 input:hover,
@@ -181,7 +177,7 @@ textarea:focus,
 select:focus {
   background: var(--color-card);
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 button {
