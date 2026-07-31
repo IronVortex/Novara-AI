@@ -3,7 +3,8 @@
 .chat-shell {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   padding: 20px;
   gap: 14px;
   background: var(--color-bg);
@@ -34,7 +35,9 @@
 
 .messages-pane {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   border-radius: var(--radius-lg);
   padding: 20px;
   scroll-behavior: smooth;
@@ -80,9 +83,7 @@
   font-size: 1.6rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  background: linear-gradient(135deg, var(--color-text) 30%, var(--color-primary), var(--color-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--color-text);
 }
 
 .empty-state p {
@@ -98,12 +99,12 @@
   width: 56px;
   height: 56px;
   border-radius: 18px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   margin-bottom: 20px;
-  color: white;
+  color: var(--color-primary);
   font-size: 1.4rem;
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 30%, transparent),
-              0 0 0 1px color-mix(in srgb, var(--color-primary) 50%, transparent);
+  box-shadow: var(--shadow-soft);
   animation: floatBadge 4s ease-in-out infinite;
 }
 
@@ -150,10 +151,10 @@
 }
 
 .assistant-row .message-avatar {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  border: none;
-  color: white;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 25%, transparent);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  box-shadow: var(--shadow-soft);
 }
 
 /* Premium Styling for Message Bubbles */
@@ -170,13 +171,16 @@
 }
 
 .user-bubble {
-  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-card));
-  border-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
-  box-shadow: 0 4px 20px -2px color-mix(in srgb, var(--color-primary) 10%, transparent);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-soft);
 }
 
 .assistant-bubble {
-  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 16px 0;
 }
 
 .message-meta {
@@ -347,10 +351,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: linear-gradient(90deg, 
-    color-mix(in srgb, var(--color-primary) 12%, var(--color-card)), 
-    color-mix(in srgb, var(--color-secondary) 12%, var(--color-card))
-  );
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   font-size: 0.8rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -361,9 +362,7 @@
 .code-block-header span {
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--color-secondary-text);
 }
 
 .code-block-header button {
@@ -543,11 +542,11 @@
   padding: 10px 18px;
   font-weight: 600;
   font-size: 0.85rem;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  background: var(--color-primary);
   color: white;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  box-shadow: var(--shadow-soft);
 }
 
 .send-btn:hover {
