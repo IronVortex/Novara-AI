@@ -115,10 +115,6 @@ function ChatWindow({ onToggleSidebar }) {
             <IconMenu size={18} />
           </button>
           <div className="chat-title">
-            <span className="chat-header-eyebrow">
-              <IconSparkle size={12} />
-              Intelligent workspace
-            </span>
             <h1>{greeting}</h1>
           </div>
         </div>

@@ -25,10 +25,9 @@
 html,
 body,
 #root {
-  height: 100vh;
-  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
-  overflow: hidden;
   margin: 0;
   padding: 0;
 }
@@ -218,8 +217,9 @@ select:focus-visible {
 .app-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   width: 100%;
 }
 

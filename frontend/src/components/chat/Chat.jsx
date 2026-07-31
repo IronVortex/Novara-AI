@@ -15,7 +15,7 @@ function Chat({
   onMetaChange,
   conversationQuery,
 }) {
-  const { newChat, prevChats, isAuthenticated, settings, authUser } = useContext(MyContext);
+  const { newChat, prevChats, isAuthenticated, settings } = useContext(MyContext);
 
   const visibleMessages = useMemo(() => {
     const query = conversationQuery.trim().toLowerCase();
@@ -23,23 +23,11 @@ function Chat({
     return (prevChats || []).filter((message) => message.content?.toLowerCase().includes(query));
   }, [conversationQuery, prevChats]);
 
-  const welcomeMessage = useMemo(() => {
-    if (isAuthenticated && authUser?.name) {
-      const firstName = authUser.name.split(" ")[0];
-      const hours = new Date().getHours();
-      let timeGreeting = "Good day";
-      if (hours < 12) timeGreeting = "Good morning";
-      else if (hours < 18) timeGreeting = "Good afternoon";
-      else timeGreeting = "Good evening";
-      return `${timeGreeting}, ${firstName}.`;
-    }
-    return "What can I help you with?";
-  }, [isAuthenticated, authUser]);
-
   const suggestions = [
-    { title: "✦ Explore an idea", desc: "Help me think through a complex problem", text: "Help me think through a complex problem and break down the core components." },
-    { title: "💻 Write code", desc: "Generate a function or debug an algorithm", text: "Help me write a robust JavaScript function for recursive object sanitization." },
-    { title: "📝 Draft writing", desc: "Compose an email or refine documentation", text: "Draft a professional product release email for a new AI feature." }
+    { title: "Explore an idea", desc: "Think through a complex problem", text: "Help me think through a complex problem and break down the core components." },
+    { title: "Write something", desc: "Draft an email or refine writing", text: "Draft a professional product release email for a new AI feature." },
+    { title: "Solve a problem", desc: "Generate or debug code", text: "Help me write a robust JavaScript function." },
+    { title: "Analyze a document", desc: "Extract key insights from text", text: "Summarize the key points of the following document." }
   ];
 
   const handleSuggestionClick = (text) => {
@@ -58,8 +46,7 @@ function Chat({
       {newChat && !prevChats.length ? (
         <div className="empty-state">
           <div className="empty-badge">✦</div>
-          <h3>{welcomeMessage}</h3>
-          <p className="empty-subtext">What would you like to explore today?</p>
+          <h3>What would you like to work on?</h3>
           <div className="suggestions-grid">
             {suggestions.map((s, i) => (
               <button key={i} className="suggestion-card" type="button" onClick={() => handleSuggestionClick(s.text)}>
