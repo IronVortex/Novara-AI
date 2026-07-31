@@ -1,5 +1,7 @@
+import { useState, useRef, useEffect } from "react";
 import { useTheme } from "../../hooks/useTheme.js";
 import { IconSun, IconMoon, IconMonitor } from "./Icons.jsx";
+import "../../styles/theme.css";
 
 const THEME_ICONS = {
   light: <IconSun size={16} />,
@@ -11,19 +13,53 @@ const THEME_ICONS = {
 
 function ThemeToggle() {
   const { theme, setTheme, themes } = useTheme();
-  const order = Object.keys(themes);
-  const next = order[(order.indexOf(theme) + 1) % order.length];
-  const nextLabel = themes[next]?.label || next;
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
 
   return (
-    <button
-      className="icon-pill theme-toggle"
-      onClick={() => setTheme(next)}
-      aria-label={`Switch to ${nextLabel} theme (current: ${themes[theme]?.label || theme})`}
-      title={`Theme: ${themes[theme]?.label || theme} → ${nextLabel}`}
-    >
-      {THEME_ICONS[theme] || <IconMoon size={16} />}
-    </button>
+    <div className="theme-dropdown-container" ref={menuRef}>
+      <button
+        className="icon-pill theme-toggle-btn"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="Appearance"
+        title="Appearance"
+      >
+        {THEME_ICONS[theme] || <IconMoon size={16} />}
+      </button>
+
+      {isOpen && (
+        <div className="theme-dropdown-menu">
+          <div className="theme-dropdown-header">Appearance</div>
+          {Object.entries(themes).map(([key, config]) => (
+            <button
+              key={key}
+              className={`theme-dropdown-item ${theme === key ? "active" : ""}`}
+              onClick={() => {
+                setTheme(key);
+                setIsOpen(false);
+              }}
+            >
+              <span className="theme-indicator">
+                {theme === key ? "●" : "○"}
+              </span>
+              {config.label || key}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

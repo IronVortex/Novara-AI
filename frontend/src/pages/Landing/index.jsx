@@ -11,6 +11,7 @@ import {
   IconSparkle,
   IconArrowLeft,
 } from "../../components/common/Icons.jsx";
+import ThemeToggle from "../../components/common/ThemeToggle.jsx";
 import "./landing.css";
 
 const FEATURES = [
@@ -129,6 +130,7 @@ function LandingPage() {
           <a href="#features">Features</a>
           <a href="#testimonials">Reviews</a>
           <a href="#faq">FAQ</a>
+          <ThemeToggle />
           <Link to="/login">Sign in</Link>
           <Link to="/app" className="landing-cta-nav">
             Start free
